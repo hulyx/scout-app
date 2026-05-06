@@ -27,12 +27,12 @@ jobs:
           pip install pyinstaller matplotlib
 
       - name: Build .exe
-        run: pyinstaller kdp_scout_gui.spec
+        run: pyinstaller scout_gui.spec
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "KDP Scout App ${{ github.ref_name }}"
-          files: "dist/KDP Scout App.exe"
+          name: "Scout ${{ github.ref_name }}"
+          files: "dist/Scout.exe"
           generate_release_notes: true

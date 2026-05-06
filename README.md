@@ -1,8 +1,8 @@
-# 📚 KDP Scout App
+# 📚 Scout
 
 **A free, open-source keyword research & niche analysis tool for Amazon KDP publishers.**
 
-KDP Scout App helps self-publishers find profitable niches, trending keywords, and market opportunities across **5 data sources** — all from a single desktop application.
+Scout helps self-publishers find profitable niches, trending keywords, and market opportunities across **5 data sources** — all from a single desktop application.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
 ![PyQt6](https://img.shields.io/badge/GUI-PyQt6-green)
@@ -58,9 +58,9 @@ The batch script handles **everything** for you:
 kdp-scout-app/
 ├── CLICK ME.bat                 ← Double-click to install & run
 ├── requirements.txt
-├── kdp_scout_gui.py
-├── kdp_scout_gui.spec           # PyInstaller spec
-├── kdp_scout/
+├── scout_gui.py
+├── scout_gui.spec           # PyInstaller spec
+├── scout/
 │   ├── __init__.py              # Version 0.4.0
 │   ├── __main__.py              # Entry point
 │   ├── config.py                # Configuration & rate limits
@@ -103,7 +103,7 @@ This project is a fork/enhancement of the original **KDP Scout** by [rxpelle](ht
 - ✅ **TikTok BookTok** — Now wired into the sidebar (existed but wasn't accessible)
 - ✅ **5 data sources** in the sidebar instead of 2
 - ✅ **Speed optimizations** — ThreadPoolExecutor on all collectors
-- ✅ Renamed to **KDP Scout App**
+- ✅ Renamed to **Scout**
 
 ---
 

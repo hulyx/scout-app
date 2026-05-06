@@ -1,0 +1,14 @@
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.spec.bak
+build_log.txt
+*.egg-info/
+.eggs/
+*.egg
+data/
+*.db
+.env
