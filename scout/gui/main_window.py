@@ -748,11 +748,14 @@ class MainWindow(QMainWindow):
             self._pod_container.show()
             self._stack.hide()
             self._pod_stack.show()
-            # Change logo to POD logo
+            # Change logo to POD logo (same size as KDP: 48x48)
             if _POD_LOGO_PATH.exists():
                 pixmap = QPixmap(str(_POD_LOGO_PATH))
                 if not pixmap.isNull():
-                    self._logo_label.setPixmap(pixmap.scaledToWidth(120, Qt.TransformationMode.SmoothTransformation))
+                    self._logo_label.setPixmap(
+                        pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation)
+                    )
             self._on_pod_source_changed(0)
         else:
             # Switch to KDP mode
@@ -764,11 +767,14 @@ class MainWindow(QMainWindow):
             self._kdp_container.show()
             self._pod_stack.hide()
             self._stack.show()
-            # Change logo to KDP logo
+            # Change logo to KDP logo (48x48)
             if _LOGO_PATH.exists():
                 pixmap = QPixmap(str(_LOGO_PATH))
                 if not pixmap.isNull():
-                    self._logo_label.setPixmap(pixmap.scaledToWidth(120, Qt.TransformationMode.SmoothTransformation))
+                    self._logo_label.setPixmap(
+                        pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation)
+                    )
             self._on_source_changed()
 
     def _apply_pod_style(self):
