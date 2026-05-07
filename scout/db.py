@@ -22,6 +22,118 @@ from scout.config import Config
 
 logger = logging.getLogger(__name__)
 
+# POD migration and repositories (moved from pod_db.py to avoid import issues)
+def _migrate_pod_schema(conn):
+    """Apply POD schema SQL."""
+    statements = [s.strip() for s in POD_SCHEMA_SQL.split(';') if s.strip()]
+    for stmt in statements:
+        try:
+            conn.execute(stmt)
+        except Exception as e:
+            logger.warning(f'POD migration statement failed: {e}')
+    conn.commit()
+    logger.info("Migration: applied POD schema")
+
+
+class PodKeywordRepository:
+    """Data access for pod_keywords table."""
+
+    def __init__(self, conn=None):
+        self._conn = conn or get_connection()
+        self._owns_conn = conn is None
+
+    def close(self):
+        if self._owns_conn:
+            self._conn.close()
+
+    def upsert(self, keyword, data):
+        existing = self._conn.execute(
+            'SELECT id FROM pod_keywords WHERE keyword = ?', (keyword,)
+        ).fetchone()
+        if existing:
+            sets = ', '.join(f'{k} = ?' for k in data.keys())
+            vals = list(data.values()) + [keyword]
+            self._conn.execute(f'UPDATE pod_keywords SET {sets} WHERE keyword = ?', vals)
+        else:
+            cols = ', '.join(['keyword'] + list(data.keys()))
+            qs = ', '.join(['?'] * (len(data) + 1))
+            vals = [keyword] + list(data.values())
+            self._conn.execute(f'INSERT INTO pod_keywords ({cols}) VALUES ({qs})', vals)
+        self._conn.commit()
+
+    def get_all(self):
+        return self._conn.execute('SELECT * FROM pod_keywords ORDER BY score DESC').fetchall()
+
+    def get_by_category(self, category):
+        return self._conn.execute(
+            'SELECT * FROM pod_keywords WHERE niche_category = ? ORDER BY score DESC', (category,)
+        ).fetchall()
+
+    def delete_all(self):
+        self._conn.execute('DELETE FROM pod_keywords')
+        self._conn.commit()
+
+
+class PodListingRepository:
+    """Data access for pod_listings table."""
+
+    def __init__(self, conn=None):
+        self._conn = conn or get_connection()
+        self._owns_conn = conn is None
+
+    def close(self):
+        if self._owns_conn:
+            self._conn.close()
+
+    def insert(self, keyword_id, listing):
+        self._conn.execute(
+            """INSERT INTO pod_listings
+               (keyword_id, platform, title, seller, price, reviews_count, is_bestseller, url)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                keyword_id, listing.get('platform'), listing.get('title'),
+                listing.get('seller'), listing.get('price'),
+                listing.get('reviews_count'), listing.get('is_bestseller'),
+                listing.get('url'),
+            ),
+        )
+        self._conn.commit()
+
+    def get_by_keyword(self, keyword_id):
+        return self._conn.execute(
+            'SELECT * FROM pod_listings WHERE keyword_id = ?', (keyword_id,)
+        ).fetchall()
+
+
+class PodNicheRepository:
+    """Data access for pod_niche_analyses table."""
+
+    def __init__(self, conn=None):
+        self._conn = conn or get_connection()
+        self._owns_conn = conn is None
+
+    def close(self):
+        if self._owns_conn:
+            self._conn.close()
+
+    def insert(self, data):
+        self._conn.execute(
+            """INSERT INTO pod_niche_analyses
+               (niche, demand_score, competition_score, profitability_score, trend_score, global_score, recommended_platform)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                data.get('niche'), data.get('demand_score'), data.get('competition_score'),
+                data.get('profitability_score'), data.get('trend_score'),
+                data.get('global_score'), data.get('recommended_platform'),
+            ),
+        )
+        self._conn.commit()
+
+    def get_all(self):
+        return self._conn.execute(
+            'SELECT * FROM pod_niche_analyses ORDER BY global_score DESC'
+        ).fetchall()
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS keywords (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,38 +265,60 @@ CREATE TABLE IF NOT EXISTS competition_snapshots (
 """
 
 INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS idx_keywords_keyword ON keywords(keyword);
-CREATE INDEX IF NOT EXISTS idx_keywords_source ON keywords(source);
-CREATE INDEX IF NOT EXISTS idx_keywords_category ON keywords(category);
-CREATE INDEX IF NOT EXISTS idx_keywords_active ON keywords(is_active);
+CREATE INDEX IF NOT EXISTS idx_keyword_metrics_keyword_id
+    ON keyword_metrics(keyword_id);
+CREATE INDEX IF NOT EXISTS idx_keyword_rankings_keyword_id
+    ON keyword_rankings(keyword_id);
+CREATE INDEX IF NOT EXISTS idx_keyword_rankings_book_id
+    ON keyword_rankings(book_id);
+"""
 
-CREATE INDEX IF NOT EXISTS idx_keyword_metrics_keyword_id ON keyword_metrics(keyword_id);
-CREATE INDEX IF NOT EXISTS idx_keyword_metrics_date ON keyword_metrics(snapshot_date);
-CREATE INDEX IF NOT EXISTS idx_keyword_metrics_marketplace ON keyword_metrics(marketplace);
+POD_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS pod_keywords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword TEXT NOT NULL,
+    score REAL,
+    merch_ac_position INTEGER,
+    etsy_competition INTEGER,
+    etsy_avg_price REAL,
+    redbubble_competition INTEGER,
+    spreadshirt_present BOOLEAN,
+    pinterest_board_followers INTEGER,
+    pinterest_pin_count INTEGER,
+    reddit_score REAL,
+    google_trends_score REAL,
+    google_suggest BOOLEAN,
+    niche_category TEXT,
+    product_type TEXT,
+    sources TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(keyword)
+);
 
-CREATE INDEX IF NOT EXISTS idx_books_asin ON books(asin);
-CREATE INDEX IF NOT EXISTS idx_books_is_own ON books(is_own);
+CREATE TABLE IF NOT EXISTS pod_listings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword_id INTEGER REFERENCES pod_keywords(id),
+    platform TEXT,
+    title TEXT,
+    seller TEXT,
+    price REAL,
+    reviews_count INTEGER,
+    is_bestseller BOOLEAN,
+    url TEXT,
+    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE INDEX IF NOT EXISTS idx_book_snapshots_book_id ON book_snapshots(book_id);
-CREATE INDEX IF NOT EXISTS idx_book_snapshots_date ON book_snapshots(snapshot_date);
-
-CREATE INDEX IF NOT EXISTS idx_keyword_rankings_keyword ON keyword_rankings(keyword_id);
-CREATE INDEX IF NOT EXISTS idx_keyword_rankings_book ON keyword_rankings(book_id);
-CREATE INDEX IF NOT EXISTS idx_keyword_rankings_date ON keyword_rankings(snapshot_date);
-
-CREATE INDEX IF NOT EXISTS idx_ads_search_terms_term ON ads_search_terms(search_term);
-CREATE INDEX IF NOT EXISTS idx_ads_search_terms_campaign ON ads_search_terms(campaign_name);
-CREATE INDEX IF NOT EXISTS idx_ads_search_terms_date ON ads_search_terms(report_date);
-
-CREATE INDEX IF NOT EXISTS idx_categories_browse_node ON categories(browse_node_id);
-CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
-
-CREATE INDEX IF NOT EXISTS idx_bsr_category_history_book ON bsr_category_history(book_id);
-CREATE INDEX IF NOT EXISTS idx_bsr_category_history_date ON bsr_category_history(snapshot_date);
-CREATE INDEX IF NOT EXISTS idx_bsr_category_history_category ON bsr_category_history(category_name);
-
-CREATE INDEX IF NOT EXISTS idx_competition_snapshots_keyword ON competition_snapshots(keyword_id);
-CREATE INDEX IF NOT EXISTS idx_competition_snapshots_date ON competition_snapshots(snapshot_date);
+CREATE TABLE IF NOT EXISTS pod_niche_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    niche TEXT NOT NULL,
+    demand_score REAL,
+    competition_score REAL,
+    profitability_score REAL,
+    trend_score REAL,
+    global_score REAL,
+    recommended_platform TEXT,
+    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -228,6 +362,7 @@ def _run_migrations(conn):
     _migrate_add_score_column(conn)
     _migrate_book_snapshots_v2(conn)
     _migrate_keyword_metrics_v2(conn)
+    _migrate_pod_schema(conn)
 
 
 def _migrate_add_score_column(conn):

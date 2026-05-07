@@ -168,3 +168,14 @@ class Config:
     # Goodreads / Open Library rate limits
     GOODREADS_RATE_LIMIT = 2.0   # seconds between Goodreads requests
     OPENLIBRARY_RATE_LIMIT = 1.0 # seconds between Open Library requests
+
+    # POD settings
+    POD_TARGET_PLATFORMS = ["merch", "etsy", "redbubble", "spreadshirt", "pinterest"]
+    POD_DEFAULT_PRODUCT_TYPE = "all"
+    POD_ETSY_RATE_LIMIT = 1.5   # seconds between requests
+    POD_RB_RATE_LIMIT = 1.0
+    POD_MERCH_RATE_LIMIT = 0.8
+    POD_PINTEREST_RATE_LIMIT = 2.0  # Pinterest is more sensitive to scraping
+    POD_THREAD_WORKERS = 6
+    POD_MINE_DEPTH = 2           # depth of autocomplete expansion
+    POD_MIN_SCORE_FILTER = 0.35  # minimum score to display a keyword

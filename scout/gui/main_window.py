@@ -317,18 +317,55 @@ class MainWindow(QMainWindow):
         pod_layout.addWidget(self._pod_source_combo)
         pod_layout.addSpacing(12)
 
-        # POD section
-        self._pod_section_label = QLabel("  POD TOOLS")
-        self._pod_section_label.setStyleSheet("color: #6c7086; font-size: 10px; font-weight: bold; letter-spacing: 1px;")
-        pod_layout.addWidget(self._pod_section_label)
+        # ── POD sections per source ─────────────────────────────────────────────
+        POD_SOURCE_SECTIONS = {
+            "amazon": {
+                "label": "  AMAZON TOOLS",
+                "pages": [("🔍", "Keywords"), ("🔬", "Niche Analyzer"),
+                          ("🎯", "Find For Me"), ("🔎", "Product Lookup")],
+            },
+            "google": {
+                "label": "  GOOGLE TOOLS",
+                "pages": [("📈", "Trending"), ("📊", "Market Overview")],
+            },
+            "pinterest": {
+                "label": "  PINTEREST TOOLS",
+                "pages": [("📌", "Pinterest"), ("🌱", "Seeds")],
+            },
+            "etsy": {
+                "label": "  ETSY TOOLS",
+                "pages": [("🏷", "Competitors"), ("🔎", "Product Lookup")],
+            },
+        }
 
         self._pod_buttons = []
-        for icon, label in POD_NAV:
-            btn = SidebarButton(icon, label)
-            btn.clicked.connect(lambda checked, l=label: self._switch_pod_page(l))
-            pod_layout.addWidget(btn)
-            self._nav_buttons.append((label, btn))
-            self._pod_buttons.append(btn)
+        self._pod_section_widgets = {}   # source → (QWidget container)
+
+        for source, info in POD_SOURCE_SECTIONS.items():
+            sec_widget = QWidget()
+            sec_layout = QVBoxLayout(sec_widget)
+            sec_layout.setContentsMargins(0, 0, 0, 0)
+            sec_layout.setSpacing(2)
+
+            sec_lbl = QLabel(info["label"])
+            sec_lbl.setStyleSheet(
+                "color: #6c7086; font-size: 10px; font-weight: bold; letter-spacing: 1px;"
+            )
+            sec_layout.addWidget(sec_lbl)
+
+            for icon, label in info["pages"]:
+                btn = SidebarButton(icon, label)
+                btn.clicked.connect(lambda checked, l=label: self._switch_pod_page(l))
+                sec_layout.addWidget(btn)
+                self._nav_buttons.append((label, btn))
+                self._pod_buttons.append(btn)
+
+            pod_layout.addWidget(sec_widget)
+            self._pod_section_widgets[source] = sec_widget
+
+        # Show only amazon section by default
+        for src, w in self._pod_section_widgets.items():
+            w.setVisible(src == "amazon")
 
         pod_layout.addStretch()
         self._pod_container.setLayout(pod_layout)
@@ -784,27 +821,17 @@ class MainWindow(QMainWindow):
 
     def _on_pod_source_changed(self, _=None):
         source = self._pod_source_combo.currentData() or "amazon"
-
-        # Hide all POD buttons first
-        for btn in self._pod_buttons:
-            btn.setVisible(False)
-
-        # Show buttons based on source
-        source_map = {
-            'amazon': ['Keywords', 'Niche Analyzer', 'Find For Me'],
-            'google': ['Trending', 'Market Overview'],
-            'pinterest': ['Pinterest', 'Seeds'],
-            'etsy': ['Competitors', 'Product Lookup'],
-        }
-
-        if source in source_map:
-            for label in source_map[source]:
-                for btn in self._pod_buttons:
-                    if btn.text().strip().endswith(label):
-                        btn.setVisible(True)
-            # Switch to first page for this source
-            first_page = source_map[source][0]
-            self._switch_pod_page(first_page)
+        # Show only the section for the selected source
+        for src, widget in self._pod_section_widgets.items():
+            widget.setVisible(src == source)
+        # Default page per source
+        first_page = {
+            "amazon":    "Keywords",
+            "google":    "Trending",
+            "pinterest": "Pinterest",
+            "etsy":      "Competitors",
+        }.get(source, "Keywords")
+        self._switch_pod_page(first_page)
 
     def _switch_page(self, label):
         if label not in self._pages:
@@ -823,27 +850,6 @@ class MainWindow(QMainWindow):
                 return
 
         self._stack.setCurrentIndex(self._pages[label])
-
-        for name, btn in self._nav_buttons:
-            btn.setChecked(name == label)
-
-    def _switch_pod_page(self, label):
-        if label not in self._pod_pages:
-            factory = self._pod_page_factories.get(label)
-            if factory:
-                try:
-                    page = factory()
-                except Exception as e:
-                    from PyQt6.QtWidgets import QLabel
-                    page = QLabel(f"⚠ Error loading '{label}': {e}")
-                    page.setWordWrap(True)
-                    page.setStyleSheet("color: #f38ba8; padding: 20px; font-size: 13px;")
-                idx = self._pod_stack.addWidget(page)
-                self._pod_pages[label] = idx
-            else:
-                return
-
-        self._pod_stack.setCurrentIndex(self._pod_pages[label])
 
         for name, btn in self._nav_buttons:
             btn.setChecked(name == label)
@@ -902,6 +908,34 @@ class MainWindow(QMainWindow):
             if page_idx == idx:
                 return name
         return "Keywords"
+
+    def _switch_pod_page(self, label):
+        """Lazy-load POD pages into pod_stack."""
+        if label not in self._pod_pages:
+            factory = self._pod_page_factories.get(label)
+            if factory:
+                try:
+                    page = factory()
+                except Exception as e:
+                    from PyQt6.QtWidgets import QLabel
+                    page = QLabel(f"⚠ Error loading '{label}': {e}")
+                    page.setWordWrap(True)
+                    page.setStyleSheet("color: #f38ba8; padding: 20px; font-size: 13px;")
+                idx = self._pod_stack.addWidget(page)
+                self._pod_pages[label] = idx
+            else:
+                return
+
+        self._pod_stack.setCurrentIndex(self._pod_pages[label])
+
+        # Update button states
+        for name, btn in self._nav_buttons:
+            if label in ["History", "Settings"]:
+                # Handle shared pages
+                if name == label:
+                    btn.setChecked(True)
+            else:
+                btn.setChecked(name == label)
 
     def notify(self, title, message):
         tray = QSystemTrayIcon(self)

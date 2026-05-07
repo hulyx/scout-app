@@ -624,3 +624,35 @@ QLabel[class="summary-text"] {
     padding: 8px;
     line-height: 1.5;
 }
+
+/* --- POD Mode Styles (Mauve accent) --- */
+QPushButton[class="sidebar-btn-pod"]:checked {
+    background-color: rgba(203, 166, 247, 0.15);
+    color: #cba6f7;
+    font-weight: bold;
+}
+
+QLabel[class="sidebar-title-pod"] {
+    font-size: 20px;
+    font-weight: bold;
+    color: #cba6f7;
+    padding: 8px 0;
+}
+
+/* POD button style */
+QPushButton[class="btn-pod-primary"] {
+    background-color: #cba6f7;
+    color: #1e1e2e;
+    border: none;
+    font-weight: bold;
+}
+
+QPushButton[class="btn-pod-primary"]:hover {
+    background-color: #f5c2e7;
+}
+
+/* POD gauge colors */
+QFrame[class="gauge-pod-demand"] {
+    background-color: rgba(203, 166, 247, 0.2);
+    border-radius: 4px;
+}
