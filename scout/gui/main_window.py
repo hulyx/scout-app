@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
         pixmap = QPixmap(str(_LOGO_PATH)) if _LOGO_PATH.exists() else QPixmap()
         if not pixmap.isNull():
             self._logo_label.setPixmap(
-                pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio,
+                pixmap.scaled(68, 68, Qt.AspectRatioMode.KeepAspectRatio,
                               Qt.TransformationMode.SmoothTransformation)
             )
             self._sidebar_layout.addWidget(self._logo_label)
@@ -748,12 +748,12 @@ class MainWindow(QMainWindow):
             self._pod_container.show()
             self._stack.hide()
             self._pod_stack.show()
-            # Change logo to POD logo (same size as KDP: 48x48)
+            # Change logo to POD logo (same size as KDP: 68x68)
             if _POD_LOGO_PATH.exists():
                 pixmap = QPixmap(str(_POD_LOGO_PATH))
                 if not pixmap.isNull():
                     self._logo_label.setPixmap(
-                        pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio,
+                        pixmap.scaled(68, 68, Qt.AspectRatioMode.KeepAspectRatio,
                                       Qt.TransformationMode.SmoothTransformation)
                     )
             self._on_pod_source_changed(0)
@@ -767,12 +767,12 @@ class MainWindow(QMainWindow):
             self._kdp_container.show()
             self._pod_stack.hide()
             self._stack.show()
-            # Change logo to KDP logo (48x48)
+            # Change logo to KDP logo (68x68)
             if _LOGO_PATH.exists():
                 pixmap = QPixmap(str(_LOGO_PATH))
                 if not pixmap.isNull():
                     self._logo_label.setPixmap(
-                        pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio,
+                        pixmap.scaled(68, 68, Qt.AspectRatioMode.KeepAspectRatio,
                                       Qt.TransformationMode.SmoothTransformation)
                     )
             self._on_source_changed()
