@@ -89,7 +89,6 @@ AMAZON_NAV = [
     ("🔍", "Keywords"),
     ("📈", "Trending"),
     ("🔬", "Niche Analyzer"),
-    ("🎯", "Find For Me"),
     ("🏷", "Competitors"),
     ("📊", "Ads"),
     ("🌱", "Seeds"),
@@ -100,7 +99,6 @@ GOOGLE_NAV = [
     ("🔍", "G-Keywords"),
     ("📈", "G-Trending"),
     ("📚", "G-Books"),
-    ("🎯", "Find For Me"),
 ]
 
 TIKTOK_NAV = [
@@ -323,11 +321,11 @@ class MainWindow(QMainWindow):
             "amazon": {
                 "label": "  AMAZON TOOLS",
                 "pages": [("🔍", "Keywords"), ("🔬", "Niche Analyzer"),
-                          ("🎯", "Find For Me"), ("🔎", "Product Lookup")],
+                          ("🔎", "Product Lookup")],
             },
             "google": {
                 "label": "  GOOGLE TOOLS",
-                "pages": [("📈", "Trending"), ("📊", "Market Overview")],
+                "pages": [("📈", "Trending"), ("📊", "Market Overview"), ("🎯", "Find For Me")],
             },
             "pinterest": {
                 "label": "  PINTEREST TOOLS",
