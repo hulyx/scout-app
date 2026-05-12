@@ -1,44 +1,119 @@
 """
 PodGoogleSuggest - Get Google Suggest queries for POD keywords.
+Deep recursive mining with alphabetical expansion.
 """
 import requests
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-def get_suggestions(keyword: str, prefix_with_product: bool = True) -> List[Dict[str, Any]]:
+def get_suggestions(keyword: str, prefix_with_product: bool = True, depth: int = 2) -> List[Dict[str, Any]]:
     """
-    Get Google Suggest suggestions for a keyword.
-    Optionally prefix with product types (t-shirt, mug, etc.).
+    Get Google Suggest suggestions for a keyword with recursive expansion.
     
     Args:
         keyword: Base keyword
         prefix_with_product: If True, also get suggestions with product prefixes
+        depth: Recursion depth for expansion (1 = base only, 2 = base + first expansion)
     
     Returns:
         List of suggestion dicts with 'suggestion' key
     """
     results = []
-    seen = set()
+    seen: Set[str] = set()
     
     # Base suggestions
     base_sugs = _fetch_google_suggest(keyword)
     for sug in base_sugs:
-        if sug not in seen:
+        if sug not in seen and len(sug) >= 3:
             seen.add(sug)
             results.append({"suggestion": sug, "source": "google_suggest"})
     
     # With product prefixes
     if prefix_with_product:
-        products = ["t-shirt", "mug", "sticker", "gift for", "design"]
+        products = ["t-shirt", "mug", "sticker", "gift for", "design", "funny"]
         for product in products:
             query = f"{product} {keyword}"
             product_sugs = _fetch_google_suggest(query)
             for sug in product_sugs:
-                if sug not in seen:
+                if sug not in seen and len(sug) >= 3:
                     seen.add(sug)
                     results.append({"suggestion": sug, "source": "google_suggest"})
     
+    # Recursive expansion if depth > 1
+    if depth > 1:
+        new_seeds = list(seen)[:15]  # Limit to top 15 to avoid explosion
+        expanded = _expand_recursively(new_seeds, seen, depth - 1)
+        for exp in expanded:
+            if exp not in seen:
+                seen.add(exp)
+                results.append({"suggestion": exp, "source": "google_suggest"})
+    
+    # Alphabetical expansion (a-z suffixes)
+    alpha_expansions = _expand_alphabetically(keyword, seen)
+    for exp in alpha_expansions:
+        if exp not in seen:
+            seen.add(exp)
+            results.append({"suggestion": exp, "source": "google_suggest"})
+    
     return results
+
+
+def _expand_recursively(seeds: List[str], seen: Set[str], remaining_depth: int) -> List[str]:
+    """Recursively expand seeds."""
+    if remaining_depth <= 0 or not seeds:
+        return []
+    
+    expanded = []
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        fut_map = {pool.submit(_fetch_google_suggest, seed): seed for seed in seeds}
+        for f in as_completed(fut_map):
+            try:
+                results = f.result()
+                for r in results:
+                    if r not in seen and len(r) >= 3:
+                        expanded.append(r)
+                        seen.add(r)
+            except Exception:
+                pass
+    
+    # One more level if needed
+    if remaining_depth > 1 and expanded:
+        more = _expand_recursively(expanded[:10], seen, remaining_depth - 1)
+        expanded.extend(more)
+    
+    return expanded
+
+
+def _expand_alphabetically(base_keyword: str, seen: Set[str]) -> List[str]:
+    """Expand with alphabetical suffixes (base + a, base + b, etc.)."""
+    expanded = []
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    
+    def fetch_and_collect(query: str) -> List[str]:
+        results = _fetch_google_suggest(query)
+        return [r for r in results if r not in seen and len(r) >= 3]
+    
+    with ThreadPoolExecutor(max_workers=15) as pool:
+        fut_map = {}
+        # Suffixes: "cat a", "cat b", ...
+        for letter in letters:
+            query = f"{base_keyword} {letter}"
+            fut_map[pool.submit(fetch_and_collect, query)] = query
+        
+        # Prefixes: "a cat", "b cat", ...
+        for letter in letters:
+            query = f"{letter} {base_keyword}"
+            fut_map[pool.submit(fetch_and_collect, query)] = query
+        
+        for f in as_completed(fut_map):
+            try:
+                results = f.result()
+                expanded.extend(results)
+            except Exception:
+                pass
+    
+    return expanded
 
 
 def _fetch_google_suggest(query: str) -> List[str]:
@@ -55,15 +130,15 @@ def _fetch_google_suggest(query: str) -> List[str]:
         if resp.status_code == 200:
             data = resp.json()
             suggestions = data[1] if len(data) > 1 else []
-            return suggestions
+            return [str(s).strip() for s in suggestions if s]
     except Exception as e:
         print(f"Error fetching Google Suggest: {e}")
     return []
 
 
 if __name__ == "__main__":
-    # Test
-    sugs = get_suggestions("nurse")
+    # Test deep mining
+    sugs = get_suggestions("cat", depth=2)
     print(f"Found {len(sugs)} suggestions")
-    for sug in sugs[:10]:
+    for sug in sugs[:20]:
         print(f"  {sug['suggestion']}")
