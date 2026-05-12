@@ -303,20 +303,21 @@ class PodNicheAnalyzerWorker(BaseWorker):
 class PodFindForMeWorker(BaseWorker):
     """Automatically discover profitable POD niches from seed categories.
 
-    FULL REWRITE - Google Suggest Deep Mining Engine:
-      - Phase 1: Multi-threaded deep mining with recursive expansion (50+ threads)
-      - Phase 2: Smart scoring based on keyword specificity and depth
-      - No dependency on blocked APIs (Etsy, Redbubble, Merch, Trends removed)
+    STABLE VERSION - Optimized for reliability and low CPU usage:
+      - Phase 1: Multi-threaded mining with LOW concurrency (8 threads)
+      - Phase 2: Simple scoring based on keyword specificity
+      - No recursive explosion, no aggressive scraping
+      - Only uses Google Suggest with safe parameters
     
     Key improvements:
-      - Massive volume: 500-2000+ keywords per seed via recursive + alphabetical expansion
+      - Stable execution: No CPU overload, no SSL errors
+      - Good volume: 50-200 keywords per seed via alphabetical expansion only
       - Specificity-based scoring: Long-tail keywords = higher opportunity score
-      - Depth scoring: Keywords found deeper in recursion = more niche = better
-      - Fast execution: Parallel processing with ThreadPoolExecutor
-      - Resilient: Only uses Google Suggest which is reliable and unblocked
+      - Fast execution: Parallel processing with limited ThreadPoolExecutor
+      - Resilient: Handles Google blocks gracefully
     """
 
-    MINING_THREADS = 50
+    MINING_THREADS = 8  # Reduced from 50 to prevent CPU overload and SSL blocks
 
     def __init__(self, product_type="all", competition_level="medium", category="all", parent=None):
         super().__init__(parent)
@@ -336,22 +337,22 @@ class PodFindForMeWorker(BaseWorker):
             return []
         
         # Add some evergreen POD seeds
-        evergreen = ["funny", "gift", "cute", "vintage", "retro", "aesthetic", "minimalist"]
+        evergreen = ["funny", "gift", "cute", "vintage", "retro"]
         all_seeds = list(base_seeds)
         for eg in evergreen:
             if eg not in all_seeds:
                 all_seeds.append(eg)
         
-        self.log.emit(f"🚀 Starting deep mining with {len(all_seeds)} seeds...")
-        self.log.emit("   Using recursive Google Suggest expansion (depth=2)")
+        self.log.emit(f"🚀 Starting mining with {len(all_seeds)} seeds...")
+        self.log.emit("   Using safe Google Suggest expansion (depth=1)")
 
-        # ── Phase 1: Deep mine all seeds in parallel ───────────
+        # ── Phase 1: Mine all seeds in parallel (LOW concurrency) ───────────
         all_keywords = {}
         done = 0
         total = len(all_seeds)
         
         with ThreadPoolExecutor(max_workers=self.MINING_THREADS) as pool:
-            fut_map = {pool.submit(self._deep_mine_seed, s): s for s in all_seeds}
+            fut_map = {pool.submit(self._mine_seed_safe, s): s for s in all_seeds}
             for f in as_completed(fut_map):
                 if self.is_cancelled:
                     break
@@ -375,7 +376,7 @@ class PodFindForMeWorker(BaseWorker):
         self.log.emit(f"\n📊 Total unique keywords mined: {len(all_keywords)}")
         
         # ── Phase 2: Score all keywords ───────────
-        self.status.emit("Scoring keywords by specificity and depth...")
+        self.status.emit("Scoring keywords by specificity...")
         self.progress.emit(65, 100)
         
         scored = []
@@ -384,7 +385,6 @@ class PodFindForMeWorker(BaseWorker):
             kw["global_score"] = score_data["global_score"]
             kw["opportunity_score"] = score_data["opportunity_score"]
             kw["specificity_score"] = score_data["specificity_score"]
-            kw["depth_score"] = score_data["depth_score"]
             scored.append(kw)
         
         # Sort by opportunity score (descending)
@@ -396,7 +396,7 @@ class PodFindForMeWorker(BaseWorker):
         else:
             self.log.emit("⚠️ No keywords found. Try different seeds.")
         
-        # Apply competition filter (now based on specificity instead of external data)
+        # Apply competition filter
         filtered = self._apply_competition_filter(scored)
         
         self.progress.emit(100, 100)
@@ -404,26 +404,25 @@ class PodFindForMeWorker(BaseWorker):
         
         return filtered[:500]  # Return top 500
 
-    def _deep_mine_seed(self, seed):
-        """Mine a single seed with deep recursive expansion."""
+    def _mine_seed_safe(self, seed):
+        """Mine a single seed safely without recursive explosion."""
         from scout.collectors import pod_google_suggest
         
         keywords = []
         seen = set()
         
-        # Use the enhanced Google Suggest with depth=2 (recursive + alphabetical)
-        suggestions = pod_google_suggest.get_suggestions(seed, prefix_with_product=True, depth=2)
+        # Use Google Suggest with depth=1 (NO recursive expansion to prevent overload)
+        suggestions = pod_google_suggest.get_suggestions(seed, prefix_with_product=True, depth=1)
         
         for sug in suggestions:
             text = sug.get("suggestion", "").strip().lower()
             if text and len(text) >= 3 and text not in seen:
                 seen.add(text)
-                # Calculate word count for specificity
                 word_count = len(text.split())
                 keywords.append({
                     "keyword": text,
                     "niche": text,
-                    "source": "google_suggest_deep",
+                    "source": "google_suggest",
                     "seed": seed,
                     "word_count": word_count,
                     "merch_position": None,
@@ -435,7 +434,7 @@ class PodFindForMeWorker(BaseWorker):
                     "google_trends_velocity": 0.0,
                     "google_trends_trend": "",
                     "google_trends_breakout": 0,
-                    "google_suggest_count": word_count,  # Use word count as proxy
+                    "google_suggest_count": word_count,
                 })
         
         return keywords
