@@ -509,43 +509,6 @@ class PodFindForMeWorker(BaseWorker):
         
         return filtered
 
-        rc = min(1.0, r.get("rb_competition", 0) / 50000)
-        comp = 1.0 - (ec * 0.5 + rc * 0.5)
-        trend = min(1.0, r.get("google_trends_avg", 0) / 100.0)
-        gs = min(1.0, r.get("google_suggest_count", 0) / 10.0)
-        mp = r.get("merch_position")
-        merch = max(0.0, 1.0 - (mp or 50) / 50) if mp else 0.3
-        # Velocity bonus: reward rising trends
-        velocity = r.get("google_trends_velocity", 0)
-        velocity_bonus = max(0.0, min(0.15, velocity * 0.1)) if velocity > 0 else 0.0
-        # Breakout bonus: reward keywords with breakout queries
-        breakout_bonus = min(0.1, r.get("google_trends_breakout", 0) * 0.02)
-        trend_direction_bonus = 0.05 if r.get("google_trends_trend") == "rising" else 0.0
-        return round(min(1.0, comp * 0.30 + trend * 0.25 + gs * 0.15 + merch * 0.15 + velocity_bonus + breakout_bonus + trend_direction_bonus), 3)
-
-    def _compute_opportunity_score(self, r):
-        """Compute enhanced opportunity score with velocity and breakout detection."""
-        base_score = self._compute_score(r)
-        # Factor in competition inversely (lower competition = higher opportunity)
-        ec = min(1.0, r.get("etsy_competition", 0) / 50000)
-        rc = min(1.0, r.get("rb_competition", 0) / 50000)
-        comp_factor = 1.0 - (ec * 0.5 + rc * 0.5)
-        # Velocity multiplier: boost rising trends
-        velocity = r.get("google_trends_velocity", 0)
-        velocity_mult = 1.0 + max(0.0, min(0.5, velocity * 0.3))
-        # Price factor: optimal range $20-35
-        avg_price = (r.get("etsy_avg_price", 0) + r.get("rb_avg_price", 0)) / 2
-        price_factor = 1.0 if 20 <= avg_price <= 35 else (0.8 if 15 <= avg_price < 20 or 35 < avg_price <= 45 else 0.6)
-        
-        opportunity = base_score * comp_factor * velocity_mult * price_factor
-        return round(min(1.0, opportunity), 3)
-
-    def _apply_competition_filter(self, results):
-        """Filter by desired competition level - DISABLED for Google Suggest only mode."""
-        # Since we removed Etsy/Redbubble data, competition filtering is based on specificity only
-        # For now, return all results sorted by opportunity score
-        return results
-
 
 class PodCompetitorsWorker(BaseWorker):
     """Scrape top POD listings for a niche on a given platform."""
