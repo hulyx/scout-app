@@ -100,6 +100,7 @@ GOOGLE_NAV = [
     ("🔍", "G-Keywords"),
     ("📈", "G-Trending"),
     ("📚", "G-Books"),
+    ("🎯", "Find For Me"),
 ]
 
 TIKTOK_NAV = [
@@ -123,7 +124,6 @@ POD_NAV = [
     ("🔍", "Keywords"),
     ("📈", "Trending"),
     ("🔬", "Niche Analyzer"),
-    ("🎯", "Find For Me"),
     ("🏷", "Competitors"),
     ("🌱", "Seeds"),
     ("📌", "Pinterest"),
