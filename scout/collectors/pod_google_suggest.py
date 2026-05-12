@@ -117,47 +117,108 @@ def _expand_alphabetically(base_keyword: str, seen: Set[str]) -> List[str]:
 
 
 def _fetch_google_suggest(query: str) -> List[str]:
-    """Fetch suggestions from Google Suggest API with HTTPS, fallback, and robust parsing."""
-    urls = [
-        "https://suggestqueries.google.com/complete/search",
-        "https://clients1.google.com/complete/search",
-        "http://suggestqueries.google.com/complete/search",
+    """Fetch suggestions using googlesearch-python library to bypass SSL blocks."""
+    try:
+        from googlesearch import search
+        # Use the search library which handles redirects and SSL better
+        # We only need a few results to extract suggestions from titles/snippets
+        results = []
+        try:
+            # Search for the query and extract related terms from results
+            search_results = list(search(query, num_results=5, lang="en", timeout=5))
+            for url in search_results:
+                # Extract potential keywords from URL structure
+                if "google.com/search" in url or "youtu.be" not in url:
+                    # Clean URL to get meaningful phrases
+                    parts = url.replace("https://", "").replace("http://", "").split("/")
+                    for part in parts:
+                        clean = part.replace("-", " ").replace("_", " ").strip()
+                        if len(clean) > 3 and query.lower() in clean.lower():
+                            results.append(clean.title())
+        except Exception as e:
+            pass
+        
+        # Fallback: try direct API with aggressive retry and different client
+        if not results:
+            results = _fetch_direct_api(query)
+        
+        return list(set([r.strip() for r in results if len(r) >= 3]))
+    except Exception:
+        return _fetch_direct_api(query)
+
+
+def _fetch_direct_api(query: str) -> List[str]:
+    """Direct API fetch with multiple clients and aggressive retry logic."""
+    # Try different client types that are less blocked
+    clients = [
+        ("chrome", "firefox"),
+        ("chrome", "chrome"),
+        ("firefox", "firefox"),
+        ("gws", "firefox"),  # Google Web Search
+        ("serp", "chrome"),
     ]
-    params = {
-        "client": "firefox",
-        "q": query,
-        "hl": "en",
-    }
+    
+    urls = [
+        "https://www.google.com/complete/search",
+        "https://suggestqueries.google.com/complete/search",
+    ]
+    
     headers_list = [
-        {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
-        {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"},
-        {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0"},
+        {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Accept": "*/*", "Accept-Language": "en-US,en;q=0.9"},
+        {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Accept": "*/*", "Accept-Language": "en-US,en;q=0.9"},
+        {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0", "Accept": "*/*", "Accept-Language": "en-US,en;q=0.9"},
+        {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", "Accept": "*/*"},
     ]
     
     import random
-    for attempt in range(3):
-        url = urls[attempt % len(urls)]
+    import time
+    
+    for attempt in range(5):  # More retries
+        client_name, cb_name = random.choice(clients)
+        url = random.choice(urls)
         headers = random.choice(headers_list)
+        
+        params = {
+            "q": query,
+            "client": client_name,
+            "cp": cb_name,
+            "gs_ri": "hp",
+            "xhr": "t",
+            "xssi": "t",
+            "hl": "en",
+        }
+        
         try:
-            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            session = requests.Session()
+            session.headers.update(headers)
+            resp = session.get(url, params=params, timeout=8)
+            
             if resp.status_code == 200:
-                data = resp.json()
+                text = resp.text
+                # Handle JSONP response (starts with ")]}'\n")
+                if text.startswith(")]}'"):
+                    text = text[4:]
+                elif text.startswith(")]}'\n"):
+                    text = text[5:]
+                
+                import json
+                data = json.loads(text)
                 if isinstance(data, list) and len(data) >= 2:
                     suggestions = data[1]
                     if isinstance(suggestions, list):
-                        return [str(s).strip() for s in suggestions if s and isinstance(s, str)]
+                        extracted = []
+                        for s in suggestions:
+                            if isinstance(s, str):
+                                extracted.append(s.strip())
+                            elif isinstance(s, list) and len(s) > 0:
+                                extracted.append(str(s[0]).strip())
+                        return extracted
                 return []
-        except requests.exceptions.Timeout:
-            continue
-        except requests.exceptions.RequestException as e:
-            print(f"Request error (attempt {attempt+1}): {e}")
-            continue
-        except ValueError as e:
-            print(f"JSON parse error (attempt {attempt+1}): {e}")
-            continue
         except Exception as e:
-            print(f"Unexpected error (attempt {attempt+1}): {e}")
+            if attempt < 4:
+                time.sleep(0.5 * (attempt + 1))  # Exponential backoff
             continue
+    
     return []
 
 
