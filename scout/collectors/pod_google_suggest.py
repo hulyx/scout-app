@@ -117,22 +117,47 @@ def _expand_alphabetically(base_keyword: str, seen: Set[str]) -> List[str]:
 
 
 def _fetch_google_suggest(query: str) -> List[str]:
-    """Fetch suggestions from Google Suggest API."""
-    url = "http://suggestqueries.google.com/complete/search"
+    """Fetch suggestions from Google Suggest API with HTTPS, fallback, and robust parsing."""
+    urls = [
+        "https://suggestqueries.google.com/complete/search",
+        "https://clients1.google.com/complete/search",
+        "http://suggestqueries.google.com/complete/search",
+    ]
     params = {
         "client": "firefox",
         "q": query,
         "hl": "en",
     }
+    headers_list = [
+        {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+        {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"},
+        {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0"},
+    ]
     
-    try:
-        resp = requests.get(url, params=params, timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            suggestions = data[1] if len(data) > 1 else []
-            return [str(s).strip() for s in suggestions if s]
-    except Exception as e:
-        print(f"Error fetching Google Suggest: {e}")
+    import random
+    for attempt in range(3):
+        url = urls[attempt % len(urls)]
+        headers = random.choice(headers_list)
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and len(data) >= 2:
+                    suggestions = data[1]
+                    if isinstance(suggestions, list):
+                        return [str(s).strip() for s in suggestions if s and isinstance(s, str)]
+                return []
+        except requests.exceptions.Timeout:
+            continue
+        except requests.exceptions.RequestException as e:
+            print(f"Request error (attempt {attempt+1}): {e}")
+            continue
+        except ValueError as e:
+            print(f"JSON parse error (attempt {attempt+1}): {e}")
+            continue
+        except Exception as e:
+            print(f"Unexpected error (attempt {attempt+1}): {e}")
+            continue
     return []
 
 

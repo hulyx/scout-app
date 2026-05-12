@@ -391,7 +391,10 @@ class PodFindForMeWorker(BaseWorker):
         scored.sort(key=lambda x: x.get("opportunity_score", 0), reverse=True)
         
         self.progress.emit(85, 100)
-        self.log.emit(f"✅ Top keyword: {scored[0].get('keyword', 'N/A')} (score: {scored[0].get('opportunity_score', 0):.3f})")
+        if scored:
+            self.log.emit(f"✅ Top keyword: {scored[0].get('keyword', 'N/A')} (score: {scored[0].get('opportunity_score', 0):.3f})")
+        else:
+            self.log.emit("⚠️ No keywords found. Try different seeds.")
         
         # Apply competition filter (now based on specificity instead of external data)
         filtered = self._apply_competition_filter(scored)
