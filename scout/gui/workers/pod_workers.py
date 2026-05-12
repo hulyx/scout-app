@@ -492,16 +492,17 @@ class PodFindForMeWorker(BaseWorker):
         for r in results:
             spec = r.get("specificity_score", 0.5)
             
-            # Low competition = high specificity (long-tail keywords)
-            if level == "low" and spec < 0.6:
+            # Low competition = high specificity only (long-tail keywords)
+            if level == "low" and spec < 0.7:
                 continue
             
-            # High competition = broad keywords (low specificity)
-            if level == "high" and spec > 0.6:
+            # High competition = include broader keywords
+            if level == "high" and spec > 0.8:
                 continue
             
-            # Medium = balanced
-            if level == "medium" and (spec < 0.3 or spec > 0.9):
+            # Medium = include almost everything except extremes
+            # Keep keywords with specificity between 0.1 and 1.0 (inclusive)
+            if level == "medium" and (spec < 0.1 or spec > 1.0):
                 continue
             
             filtered.append(r)
@@ -540,26 +541,10 @@ class PodFindForMeWorker(BaseWorker):
         return round(min(1.0, opportunity), 3)
 
     def _apply_competition_filter(self, results):
-        """Filter by desired competition level (FIXED: was inverted bug)."""
-        level = self.competition_level
-        if level == "any":
-            return results
-        filtered = []
-        for r in results:
-            ec = min(1.0, r.get("etsy_competition", 0) / 50000)
-            rc = min(1.0, r.get("rb_competition", 0) / 50000)
-            comp_score = 1.0 - (ec * 0.5 + rc * 0.5)
-            # FIXED: correct logic - low competition means HIGH comp_score (close to 1.0)
-            if level == "low" and comp_score < 0.6:
-                continue
-            # FIXED: high competition means LOW comp_score (close to 0.0)
-            if level == "high" and comp_score > 0.6:
-                continue
-            # Medium: between 0.3 and 0.7
-            if level == "medium" and (comp_score < 0.3 or comp_score > 0.7):
-                continue
-            filtered.append(r)
-        return filtered
+        """Filter by desired competition level - DISABLED for Google Suggest only mode."""
+        # Since we removed Etsy/Redbubble data, competition filtering is based on specificity only
+        # For now, return all results sorted by opportunity score
+        return results
 
 
 class PodCompetitorsWorker(BaseWorker):
