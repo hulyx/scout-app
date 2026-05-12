@@ -104,11 +104,24 @@ class PodFindForMePage(QWidget):
         product_type = self._type_combo.currentText().lower()
         competition_level = self._comp_combo.currentText().lower()
         category = self._category_combo.currentText().lower()
+        
+        # Ensure previous worker is properly cleaned up
+        if self._worker:
+            if self._worker.isRunning():
+                self._worker.quit()
+                self._worker.wait(1000)
+            self._worker.deleteLater()
+            self._worker = None
+
         self._worker = PodFindForMeWorker(
             product_type=product_type,
             competition_level=competition_level,
             category=category,
         )
+        
+        # Move worker to this thread's event loop to ensure proper lifecycle
+        self._worker.moveToThread(self._worker.thread())
+        
         self._worker.status.connect(self._progress.set_status)
         self._worker.progress.connect(self._progress.set_progress)
         self._worker.log.connect(self._progress.set_status)
