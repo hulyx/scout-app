@@ -12,22 +12,19 @@ class PodFindForMePage(QWidget):
     """Page for automatically discovering profitable POD niches."""
 
     COLUMNS = [
-        "niche", "merch_position", "etsy_competition", "rb_competition",
-        "etsy_avg_price", "rb_avg_price", "google_trends_avg",
-        "google_trends_trend", "google_suggest_count", "global_score",
+        "keyword", "word_count", "specificity_score", "depth_score",
+        "global_score", "opportunity_score", "source", "seed"
     ]
 
     DISPLAY_NAMES = {
-        "niche": "Niche",
-        "merch_position": "Merch Pos",
-        "etsy_competition": "Etsy Comp",
-        "rb_competition": "RB Comp",
-        "etsy_avg_price": "Etsy Price",
-        "rb_avg_price": "RB Price",
-        "google_trends_avg": "Trends Avg",
-        "google_trends_trend": "Trend Dir",
-        "google_suggest_count": "GS Count",
-        "global_score": "Score",
+        "keyword": "Keyword",
+        "word_count": "Words",
+        "specificity_score": "Specificity",
+        "depth_score": "Depth Bonus",
+        "global_score": "Global Score",
+        "opportunity_score": "Opportunity",
+        "source": "Source",
+        "seed": "Seed",
     }
 
     def __init__(self, parent=None):
