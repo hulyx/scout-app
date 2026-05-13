@@ -371,8 +371,8 @@ class KeywordsPage(QWidget):
         self._merge_btn.clicked.connect(self._on_merge)
         toolbar.addWidget(self._merge_btn)
 
-        self._export_btn = QPushButton("📄 Export CSV")
-        self._export_btn.setToolTip("Export keywords to CSV")
+        self._export_btn = QPushButton("📄 Export")
+        self._export_btn.setToolTip("Export keywords to CSV or TXT")
         self._export_btn.clicked.connect(self._on_export_csv)
         toolbar.addWidget(self._export_btn)
 
@@ -709,9 +709,8 @@ class KeywordsPage(QWidget):
         self._worker = None
 
     def _on_export_csv(self):
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export Keywords CSV", "keywords_export.csv", "CSV Files (*.csv)"
-        )
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "keywords_export.csv", "Export")
         if not filepath:
             return
 
@@ -719,7 +718,7 @@ class KeywordsPage(QWidget):
         self._progress.start()
 
         visible_data = self._table.get_visible_data()
-        self._worker = ExportCSVWorker(filepath, data=visible_data if visible_data else None)
+        self._worker = ExportCSVWorker(filepath, delimiter=delimiter, data=visible_data if visible_data else None)
         self._worker.progress.connect(self._progress.set_progress)
         self._worker.status.connect(self._progress.set_status)
         self._worker.log.connect(self._progress.append_log)

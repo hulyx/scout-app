@@ -14,6 +14,7 @@
     "*://www.redbubble.com/*",
     "*://www.spreadshirt.com/*",
     "*://www.pinterest.com/*",
+    "*://www.thebubbletrends.com/*",
     "*://www.google.com/*",
     "http://localhost:8765/*"
   ],
@@ -44,6 +45,10 @@
     {
       "matches": ["*://www.pinterest.com/*"],
       "js": ["content-pinterest.js"]
+    },
+    {
+      "matches": ["*://www.thebubbletrends.com/*"],
+      "js": ["content-bubbletrends.js"]
     }
   ]
 }

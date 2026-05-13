@@ -65,7 +65,7 @@ class PodTrendDiscoveryPage(QWidget):
         self._scout_btn.clicked.connect(self._start_scout)
         btn_layout.addWidget(self._scout_btn)
 
-        self._export_btn = QPushButton("📤  Export CSV")
+        self._export_btn = QPushButton("📤  Export")
         self._export_btn.clicked.connect(self._export_csv)
         btn_layout.addWidget(self._export_btn)
 
@@ -139,14 +139,12 @@ class PodTrendDiscoveryPage(QWidget):
         if not self._trend_data:
             QMessageBox.warning(self, "No data", "Nothing to export.")
             return
-        from PyQt6.QtWidgets import QFileDialog
         import csv
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", "pod_trends.csv", "CSV Files (*.csv)"
-        )
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "pod_trends.csv", "Export")
         if filepath:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=TREND_COLUMNS)
+                writer = csv.DictWriter(f, fieldnames=TREND_COLUMNS, delimiter=delimiter)
                 writer.writeheader()
                 for item in self._trend_data:
                     kws = item.get("keywords") or []

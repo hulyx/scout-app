@@ -942,7 +942,7 @@ class FindForMePage(QWidget):
         self._export_json_btn.clicked.connect(self._on_export_json)
         ctrl_row.addWidget(self._export_json_btn)
 
-        self._export_csv_btn = QPushButton("📊 CSV")
+        self._export_csv_btn = QPushButton("📊 Export")
         self._export_csv_btn.setFixedHeight(44)
         self._export_csv_btn.setFixedWidth(100)
         self._export_csv_btn.setEnabled(False)
@@ -1303,24 +1303,25 @@ class FindForMePage(QWidget):
         if not self._last_results:
             return
 
-        path, _ = QFileDialog.getSaveFileName(
+        from scout.gui.export_helper import get_export_path
+        path, delimiter = get_export_path(
             self,
-            "Export niches to CSV",
             f"kdp_niches_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            "CSV files (*.csv)",
+            "Export",
         )
         if not path:
             return
 
         try:
             from scout.collectors.discovery import export_clusters_csv
-            csv_str = export_clusters_csv(self._last_results.get('clusters', []))
+            csv_str = export_clusters_csv(self._last_results.get('clusters', []),
+                                          delimiter=delimiter)
             with open(path, 'w', encoding='utf-8', newline='') as f:
                 f.write(csv_str)
             n = len(self._last_results.get('clusters', []))
             self._status_label.setText(f"✅ Exported {n} niches → {path}")
         except Exception as e:
-            self._status_label.setText(f"❌ CSV export failed: {e}")
+            self._status_label.setText(f"❌ Export failed: {e}")
 
     def _build_cards(self, clusters):
         while self._cards_layout.count():

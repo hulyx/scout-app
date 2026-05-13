@@ -1580,3 +1580,98 @@ class PodAmazonTrendsWorker(BaseWorker):
         mv_count = sum(1 for r in results if r['rank_type'] == 'mover')
         self.log.emit(f"Bestsellers: {bs_count}, Movers: {mv_count}")
         return results
+
+
+class PodBubbleTrendsWorker(BaseWorker):
+    """Fetch trending Redbubble keywords with result counts from Bubble Trends.
+
+    Primary source: BubbleTrends page (thebubbletrends.com — requires extension reload).
+    Fallback: Redbubble popular page (works with old extension).
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def _try_bubbletrends(self):
+        """Try scraping BubbleTrends page (requires extension reload for new content script)."""
+        from scout.bridge_client import bridge_bubbletrends
+
+        self.log.emit("Trying BubbleTrends (thebubbletrends.com/trends)...")
+        self.status.emit("Scraping BubbleTrends page...")
+        try:
+            data = bridge_bubbletrends()
+            if data is None:
+                self.log.emit("  BubbleTrends: action not available (old extension)")
+                return None
+            items = data.get("items") or []
+            if items:
+                items.sort(key=lambda x: -x.get("result_count", 0))
+                self.progress.emit(1, 1)
+                self.status.emit(f"{len(items)} trending keywords from Redbubble")
+                self.log.emit(f"  Top: {items[0].get('keyword', '')} ({items[0].get('result_count', 0)} results)")
+                return items
+            self.log.emit("  BubbleTrends: page returned 0 items")
+            return None
+        except Exception as e:
+            self.log.emit(f"  BubbleTrends error: {e}")
+            return None
+
+    def _try_redbubble_popular_fallback(self):
+        """Fallback: scrape Redbubble popular page (works with old extension)."""
+        from scout.bridge_client import bridge_trending_redbubble
+
+        self.log.emit("Fallback: Redbubble Popular page...")
+        self.status.emit("Scraping Redbubble Popular...")
+        try:
+            data = bridge_trending_redbubble()
+            if data is None:
+                self.log.emit("  Redbubble Popular: bridge unavailable")
+                return None
+            items = data.get("items") or []
+            if not items:
+                self.log.emit("  Redbubble Popular: 0 products found")
+                return None
+            items.sort(key=lambda x: -x.get("price", 0))
+            self.progress.emit(1, 1)
+            self.status.emit(f"{len(items)} popular Redbubble products")
+            self.log.emit(f"  Top: {items[0].get('title', '')} (${items[0].get('price', 0)})")
+            return items
+        except Exception as e:
+            self.log.emit(f"  Redbubble Popular error: {e}")
+            return None
+
+    def run_task(self):
+        from scout.extension_bridge import is_extension_available, is_extension_connected
+
+        if not is_extension_available():
+            self.log.emit("Bridge server not running")
+            return []
+        if not is_extension_connected():
+            self.log.emit("Extension not detected in Chrome:")
+            self.log.emit("  1. Open chrome://extensions")
+            self.log.emit("  2. Enable Developer mode")
+            self.log.emit("  3. Click 'Load unpacked' → select scout-extension/ folder")
+            return []
+
+        self.progress.emit(0, 1)
+
+        # Primary: BubbleTrends page (requires reloaded extension)
+        result = self._try_bubbletrends()
+        if result is not None:
+            return result
+
+        # Fallback: Redbubble popular page (works with old extension)
+        self.log.emit("")
+        self.log.emit("⚡ For full BubbleTrends data (keywords + result counts):")
+        self.log.emit("   1. Go to chrome://extensions")
+        self.log.emit("   2. Click the reload icon on Scout Companion")
+        self.log.emit("   3. Try again")
+        self.log.emit("")
+        self.log.emit("Showing Redbubble popular products as fallback...")
+
+        result = self._try_redbubble_popular_fallback()
+        if result is not None:
+            return result
+
+        self.log.emit("No data available from any source")
+        return []

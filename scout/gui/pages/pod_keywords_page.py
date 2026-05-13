@@ -90,7 +90,7 @@ class PodKeywordsPage(QWidget):
         self._score_btn.clicked.connect(self._start_score)
         btn_layout.addWidget(self._score_btn)
 
-        self._export_btn = QPushButton("📤  Export CSV")
+        self._export_btn = QPushButton("📤  Export")
         self._export_btn.clicked.connect(self._export_csv)
         btn_layout.addWidget(self._export_btn)
 
@@ -206,14 +206,12 @@ class PodKeywordsPage(QWidget):
         if not self._keywords_data:
             QMessageBox.warning(self, "No data", "Nothing to export.")
             return
-        from PyQt6.QtWidgets import QFileDialog
         import csv
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", "pod_amazon_keywords.csv", "CSV Files (*.csv)"
-        )
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "pod_amazon_keywords.csv", "Export")
         if filepath:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=POD_KEYWORD_COLUMNS)
+                writer = csv.DictWriter(f, fieldnames=POD_KEYWORD_COLUMNS, delimiter=delimiter)
                 writer.writeheader()
                 for kw in self._keywords_data:
                     writer.writerow({col: kw.get(col, "") for col in POD_KEYWORD_COLUMNS})

@@ -4,7 +4,7 @@
 
 const BRIDGE_URL = "http://localhost:8765";
 const POLL_INTERVAL_SECONDS = 2;
-const TAB_TIMEOUT_MS = 25000; // 25 seconds per command tab
+const TAB_TIMEOUT_MS = 45000; // 45 seconds per command tab
 const MAX_CONCURRENT_TABS = 4;
 
 // Track active tab commands so we don't open duplicates
@@ -75,6 +75,8 @@ async function dispatchCommand(cmd) {
       return openAndScrape(id, action, "https://www.amazon.com/gp/bestsellers/fashion/", "amazon-bestsellers");
     case "amazon_movers":
       return openAndScrape(id, action, "https://www.amazon.com/gp/movers-and-shakers/fashion/", "amazon-movers");
+    case "bubbletrends":
+      return openAndScrape(id, action, "https://www.thebubbletrends.com/trends", "bubbletrends");
     case "get_google_suggest":
       return fetchGoogleSuggest(id, params);
     default:

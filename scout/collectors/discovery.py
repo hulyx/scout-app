@@ -1076,10 +1076,10 @@ def _generate_recommendations(cluster):
 
 # ── Export helpers ────────────────────────────────────────────────────────
 
-def export_clusters_csv(clusters):
+def export_clusters_csv(clusters, delimiter=","):
     """Export clusters as CSV string."""
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = csv.writer(output, delimiter=delimiter)
     writer.writerow([
         'Rank', 'GO Score', 'Verdict', 'Niche', 'Classification',
         'Competition', 'Avg BSR', 'Med Reviews', 'KU %',

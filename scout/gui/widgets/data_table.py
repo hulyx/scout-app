@@ -234,11 +234,24 @@ class DataTable(QWidget):
         search_web_action.triggered.connect(self._search_on_web)
         menu.addAction(search_web_action)
 
+        # Custom actions injected by the page (receives full row data)
+        index = self._table.currentIndex()
+        if index.isValid():
+            source_index = self._proxy.mapToSource(index)
+            row_data = self._model.get_row_data(source_index.row()) or {}
+            for action in self._extra_context_actions(row_data):
+                menu.addAction(action)
+
         export_action = QAction("Export Visible as CSV...", self)
         export_action.triggered.connect(self.export_csv)
         menu.addAction(export_action)
 
         menu.exec(self._table.viewport().mapToGlobal(pos))
+
+    def _extra_context_actions(self, cell_value: str) -> list:
+        """Override in subclasses or set via lambda to add custom menu items.
+        Returns list of QAction objects."""
+        return []
 
     def _copy_cell(self):
         index = self._table.currentIndex()
@@ -265,11 +278,10 @@ class DataTable(QWidget):
                 query = urllib.parse.quote_plus(str(value))
                 webbrowser.open(f"https://www.google.com/search?q={query}")
 
-    def export_csv(self, filepath: Optional[str] = None):
+    def export_csv(self, filepath: Optional[str] = None, delimiter: str = ","):
         if not filepath:
-            filepath, _ = QFileDialog.getSaveFileName(
-                self, "Export CSV", "export.csv", "CSV Files (*.csv)"
-            )
+            from scout.gui.export_helper import get_export_path
+            filepath, delimiter = get_export_path(self, "export.csv", "Export")
         if not filepath:
             return
 
@@ -280,7 +292,7 @@ class DataTable(QWidget):
         }
 
         with open(filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter=delimiter)
             # Header
             writer.writerow([display_names.get(c, c) for c in columns])
             # Visible rows only

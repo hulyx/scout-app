@@ -24,13 +24,18 @@ _BRIDGE_ACTIONS = {
 
 
 def _try_bridge(action: str, params: dict, timeout: int = 45) -> Optional[dict]:
-    """Try to execute via extension bridge. Returns None if unavailable."""
+    """Try to execute via extension bridge. Returns None if unavailable or error."""
     try:
         from scout.extension_bridge import get_bridge
         bridge = get_bridge()
         if bridge is None:
             return None
-        return bridge.execute(action, params, timeout=timeout)
+        result = bridge.execute(action, params, timeout=timeout)
+        if result and result.get("status") == "error":
+            error = result.get("error", "unknown")
+            logger.warning("Bridge error for %s: %s", action, error)
+            return None
+        return result
     except ImportError:
         return None
     except Exception:
@@ -140,6 +145,19 @@ def bridge_search_spreadshirt(keyword: str) -> Optional[Dict[str, Any]]:
 
 
 # ── Google Suggest (no tab needed, extension fetches API directly) ─
+
+
+def bridge_bubbletrends() -> Optional[Dict[str, Any]]:
+    """Scrape Bubble Trends page for trending Redbubble keywords with result counts."""
+    raw = _try_bridge("bubbletrends", {}, timeout=45)
+    if raw is None:
+        return None
+    data = _unwrap(raw)
+    listings = data.get("listings") or []
+    return {
+        "platform": "bubbletrends",
+        "items": [{"keyword": l.get("keyword", ""), "result_count": l.get("result_count", 0)} for l in listings],
+    }
 
 
 def bridge_google_suggest(keyword: str) -> list:

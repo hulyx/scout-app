@@ -4,16 +4,18 @@ from scout.gui.workers.base_worker import BaseWorker
 
 
 class ExportCSVWorker(BaseWorker):
-    """Worker thread for exporting keywords to CSV."""
+    """Worker thread for exporting keywords to CSV/TXT."""
 
-    def __init__(self, filepath: str, data: Optional[List[Dict[str, Any]]] = None,
-                 parent=None):
+    def __init__(self, filepath: str, delimiter: str = ",",
+                 data: Optional[List[Dict[str, Any]]] = None, parent=None):
         super().__init__(parent)
         self.filepath = filepath
+        self.delimiter = delimiter
         self.data = data
 
     def run_task(self):
-        self.status.emit("Exporting keywords to CSV...")
+        fmt = "CSV" if self.delimiter == "," else "TXT"
+        self.status.emit(f"Exporting keywords to {fmt}...")
 
         if self.data is None:
             from scout.db import KeywordRepository
@@ -31,7 +33,7 @@ class ExportCSVWorker(BaseWorker):
         columns = list(self.data[0].keys())
 
         with open(self.filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=columns)
+            writer = csv.DictWriter(f, fieldnames=columns, delimiter=self.delimiter)
             writer.writeheader()
 
             for i, row in enumerate(self.data):

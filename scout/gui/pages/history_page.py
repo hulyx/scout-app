@@ -63,8 +63,8 @@ class HistoryPage(QWidget):
                      "POD Amazon Keywords", "POD Trending", "POD Niche Analyzer",
                      "POD Find For Me", "POD Seeds",
                      "POD Cluster", "POD BSR Analyzer",
-                     "POD Trend Scout", "POD Amazon Trends",
-                     "POD Bloom Trends",
+                      "POD Trend Scout", "POD Amazon Trends",
+                      "POD Bloom Trends", "POD Bubble Trends",
                      "POD Pinterest", "POD Product Lookup", "POD Market Overview"]:
             self._filter_combo.addItem(f"{TOOL_ICONS.get(tool, '')} {tool}", tool)
         self._filter_combo.currentIndexChanged.connect(self._apply_filter)
@@ -127,7 +127,7 @@ class HistoryPage(QWidget):
         detail_header.addStretch()
 
         # Export buttons
-        self._export_csv_btn = QPushButton("Export CSV")
+        self._export_csv_btn = QPushButton("📤 Export")
         self._export_csv_btn.setProperty("class", "primary-btn")
         self._export_csv_btn.setEnabled(False)
         self._export_csv_btn.clicked.connect(self._on_export_csv)
@@ -299,9 +299,8 @@ class HistoryPage(QWidget):
         if not self._current_results:
             return
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export History as CSV", "", "CSV Files (*.csv)"
-        )
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "history_export.csv", "Export")
         if not filepath:
             return
 
@@ -311,12 +310,12 @@ class HistoryPage(QWidget):
             if isinstance(first, dict):
                 fieldnames = list(first.keys())
                 with open(filepath, "w", newline="", encoding="utf-8") as f:
-                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=delimiter)
                     writer.writeheader()
                     writer.writerows(data)
             else:
                 with open(filepath, "w", newline="", encoding="utf-8") as f:
-                    writer = csv.writer(f)
+                    writer = csv.writer(f, delimiter=delimiter)
                     for row in data:
                         if isinstance(row, (list, tuple)):
                             writer.writerow(row)
@@ -373,7 +372,7 @@ class HistoryPage(QWidget):
         search_web = QAction("🔍 Search on the Web", self)
         search_web.triggered.connect(lambda: self._search_on_web(self._table))
         menu.addAction(search_web)
-        export_csv = QAction("Export CSV...", self)
+        export_csv = QAction("📤 Export...", self)
         export_csv.triggered.connect(self._on_export_csv)
         menu.addAction(export_csv)
         menu.exec(self._table.viewport().mapToGlobal(pos))
@@ -390,7 +389,7 @@ class HistoryPage(QWidget):
         search_web = QAction("🔍 Search on the Web", self)
         search_web.triggered.connect(lambda: self._search_on_web(self._detail_table))
         menu.addAction(search_web)
-        export_csv = QAction("Export CSV...", self)
+        export_csv = QAction("📤 Export...", self)
         export_csv.triggered.connect(self._on_export_csv)
         menu.addAction(export_csv)
         menu.exec(self._detail_table.viewport().mapToGlobal(pos))

@@ -73,7 +73,7 @@ class PodFindForMePage(QWidget):
         self._find_btn.clicked.connect(self._start_discovery)
         btn_layout.addWidget(self._find_btn)
 
-        self._export_btn = QPushButton("📤 Export CSV")
+        self._export_btn = QPushButton("📤 Export")
         self._export_btn.clicked.connect(self._export_csv)
         self._export_btn.setEnabled(False)
         btn_layout.addWidget(self._export_btn)
@@ -184,7 +184,10 @@ class PodFindForMePage(QWidget):
                 current._start_analysis()
 
     def _export_csv(self):
-        self._table.export_csv()
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "pod_find_data.csv", "Export")
+        if filepath:
+            self._table.export_csv(filepath, delimiter)
 
     def _cancel_worker(self):
         if self._worker:

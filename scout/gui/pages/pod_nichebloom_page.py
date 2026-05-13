@@ -62,7 +62,7 @@ class PodNicheBloomPage(QWidget):
         self._fetch_btn.clicked.connect(self._start_fetch)
         btn_layout.addWidget(self._fetch_btn)
 
-        self._export_btn = QPushButton("📤  Export CSV")
+        self._export_btn = QPushButton("📤  Export")
         self._export_btn.clicked.connect(self._export_csv)
         btn_layout.addWidget(self._export_btn)
 
@@ -192,11 +192,9 @@ class PodNicheBloomPage(QWidget):
         if not self._niches_data:
             QMessageBox.warning(self, "No data", "Nothing to export.")
             return
-        from PyQt6.QtWidgets import QFileDialog
         import csv
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", "bloom_trends.csv", "CSV Files (*.csv)"
-        )
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "bloom_trends.csv", "Export")
         if not filepath:
             return
 
@@ -207,7 +205,7 @@ class PodNicheBloomPage(QWidget):
         total = len(self._niches_data)
 
         with open(filepath, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter=delimiter)
             writer.writerow([
                 "Score", "Niche Name", "Category", "Demand", "Description",
                 "Starter Ideas", "Best Use", "Design Angle", "Monetization Note",

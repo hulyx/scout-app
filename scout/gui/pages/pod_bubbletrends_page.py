@@ -1,25 +1,25 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QMessageBox, QDialog, QTextEdit,
+    QMessageBox,
 )
 from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
-from scout.gui.workers.pod_workers import PodAmazonTrendsWorker
+from scout.gui.workers.pod_workers import PodBubbleTrendsWorker
 from scout.gui.search_history import SearchHistory
 
 
-AMZ_COLUMNS = ["title", "source"]
-
-AMZ_DISPLAY_NAMES = {
-    "title": "Product Title",
-    "source": "Rank Type",
+BT_COLUMNS = ["rank", "keyword", "result_count"]
+BT_DISPLAY_NAMES = {
+    "rank": "#",
+    "keyword": "Keyword",
+    "result_count": "Result Count",
 }
 
 
-class PodAmazonTrendsPage(QWidget):
-    """Fetch and display Amazon Bestsellers + Movers & Shakers."""
+class PodBubbleTrendsPage(QWidget):
+    """Display trending Redbubble keywords from Bubble Trends."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -32,15 +32,14 @@ class PodAmazonTrendsPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🛒 Amazon Trends (POD)</h2>")
+        header = QLabel("<h2> Bubble Trends (Redbubble)</h2>")
         header.setStyleSheet("color: #cba6f7;")
         layout.addWidget(header)
 
         desc = QLabel(
-            "Scrapes Amazon Bestsellers in Fashion and Movers & Shakers "
-            "via the browser extension. Bestsellers = what's popular now. "
-            "Movers = products with the biggest sales rank gains — "
-            "perfect for spotting rising POD opportunities."
+            "Trending keywords on Redbubble with real result counts, "
+            "aggregated by Bubble Trends. Data refreshes every 24 hours. "
+            "Sorted by result count (highest first)."
         )
         desc.setWordWrap(True)
         desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
@@ -48,7 +47,7 @@ class PodAmazonTrendsPage(QWidget):
 
         btn_layout = QHBoxLayout()
 
-        self._fetch_btn = QPushButton("🛒  Fetch Amazon Trends")
+        self._fetch_btn = QPushButton(" Fetch Bubble Trends")
         self._fetch_btn.setProperty("class", "btn-primary")
         self._fetch_btn.setMinimumHeight(48)
         self._fetch_btn.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -59,15 +58,15 @@ class PodAmazonTrendsPage(QWidget):
         self._export_btn.clicked.connect(self._export_csv)
         btn_layout.addWidget(self._export_btn)
 
-        self._clear_btn = QPushButton("🗑  Clear")
+        self._clear_btn = QPushButton("  Clear")
         self._clear_btn.clicked.connect(self._clear_all)
         btn_layout.addWidget(self._clear_btn)
 
         btn_layout.addStretch()
-
         layout.addLayout(btn_layout)
 
         self._table = DataTable()
+        self._table._extra_context_actions = self._extra_table_actions
         layout.addWidget(self._table, 1)
 
         self._progress = ProgressPanel(show_log=True)
@@ -76,15 +75,15 @@ class PodAmazonTrendsPage(QWidget):
 
     def _start_fetch(self):
         SearchHistory.instance().log(
-            tool="POD Amazon Trends",
+            tool="POD Bubble Trends",
             action="fetch",
-            query="amazon-bestsellers-movers",
+            query="bubbletrends-redbubble",
         )
 
         self._progress.start()
         self._fetch_btn.setEnabled(False)
 
-        self._worker = PodAmazonTrendsWorker()
+        self._worker = PodBubbleTrendsWorker()
         self._worker.status.connect(self._progress.set_status)
         self._worker.progress.connect(self._progress.set_progress)
         self._worker.log.connect(self._progress.set_status)
@@ -94,26 +93,34 @@ class PodAmazonTrendsPage(QWidget):
 
     def _on_fetch_finished(self, items):
         items = items or []
-        self._progress.finish(f"✅  {len(items)} trending products found")
+        self._progress.finish(f"  {len(items)} items found")
         self._fetch_btn.setEnabled(True)
         self._trends_data = items
         self._populate_table()
         self._worker = None
 
+    def _normalize(self, item):
+        """Handle both BubbleTrends format ({keyword, result_count}) and
+        Redbubble popular fallback ({title, price, artist})."""
+        keyword = item.get("keyword") or item.get("title", "")
+        count = item.get("result_count") or item.get("price", "") or ""
+        if isinstance(count, float):
+            count = f"${count:.2f}"
+        return {"keyword": keyword, "result_count": count}
+
     def _populate_table(self):
         data = []
-        for item in self._trends_data:
-            source = item.get("source", "")
-            emoji = "🏆" if source == "Bestseller" else "📈"
-            row = {
-                "title": item.get("title", ""),
-                "source": f"{emoji} {source}",
-            }
-            data.append(row)
+        for i, item in enumerate(self._trends_data):
+            n = self._normalize(item)
+            data.append({
+                "rank": i + 1,
+                "keyword": n["keyword"],
+                "result_count": n["result_count"],
+            })
         self._table.load_data(
             data,
-            columns=AMZ_COLUMNS,
-            display_names=AMZ_DISPLAY_NAMES,
+            columns=BT_COLUMNS,
+            display_names=BT_DISPLAY_NAMES,
         )
 
     def _export_csv(self):
@@ -122,14 +129,28 @@ class PodAmazonTrendsPage(QWidget):
             return
         import csv
         from scout.gui.export_helper import get_export_path
-        filepath, delimiter = get_export_path(self, "amazon_trends.csv", "Export")
+        filepath, delimiter = get_export_path(self, "bubble_trends.csv", "Export")
         if filepath:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f, delimiter=delimiter)
-                writer.writerow(["Product Title", "Rank Type"])
-                for item in self._trends_data:
-                    writer.writerow([item.get("title", ""), item.get("source", "")])
+                writer.writerow(["Rank", "Keyword", "Result Count"])
+                for i, item in enumerate(self._trends_data):
+                    n = self._normalize(item)
+                    writer.writerow([i + 1, n["keyword"], n["result_count"]])
             QMessageBox.information(self, "Export done", f"Saved to {filepath}")
+
+    def _extra_table_actions(self, row_data: dict) -> list:
+        from PyQt6.QtGui import QAction
+        import urllib.parse
+        import webbrowser
+
+        keyword = (row_data.get("keyword") or "").strip()
+        if not keyword:
+            return []
+        action = QAction("\U0001f3a8 Search on Redbubble", self)
+        url = f"https://www.redbubble.com/shop?query={urllib.parse.quote(keyword)}"
+        action.triggered.connect(lambda: webbrowser.open(url))
+        return [action]
 
     def _clear_all(self):
         self._table.clear()
@@ -141,6 +162,6 @@ class PodAmazonTrendsPage(QWidget):
             self._worker.cancel()
 
     def _on_worker_error(self, error_msg):
-        self._progress.finish(f"❌  Error: {error_msg}")
+        self._progress.finish(f"  Error: {error_msg}")
         self._fetch_btn.setEnabled(True)
         self._worker = None

@@ -80,7 +80,7 @@ class PodBSRAnalyzerPage(QWidget):
 
         btn_layout.addStretch()
 
-        self._export_btn = QPushButton("📤  Export CSV")
+        self._export_btn = QPushButton("📤  Export")
         self._export_btn.clicked.connect(self._export_csv)
         btn_layout.addWidget(self._export_btn)
 
@@ -178,14 +178,12 @@ class PodBSRAnalyzerPage(QWidget):
         if not self._bsr_data:
             QMessageBox.warning(self, "No data", "Nothing to export.")
             return
-        from PyQt6.QtWidgets import QFileDialog
         import csv
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", "pod_bsr_data.csv", "CSV Files (*.csv)"
-        )
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "pod_bsr_data.csv", "Export")
         if filepath:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=BSR_COLUMNS)
+                writer = csv.DictWriter(f, fieldnames=BSR_COLUMNS, delimiter=delimiter)
                 writer.writeheader()
                 for r in self._bsr_data:
                     writer.writerow({col: r.get(col, "") for col in BSR_COLUMNS})

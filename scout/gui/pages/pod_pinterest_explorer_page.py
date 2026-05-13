@@ -99,7 +99,7 @@ class PodPinterestExplorerPage(QWidget):
         self._send_btn.clicked.connect(self._send_to_keywords)
         btn_layout.addWidget(self._send_btn)
 
-        self._export_btn = QPushButton("📤 Export CSV")
+        self._export_btn = QPushButton("📤 Export")
         self._export_btn.setEnabled(False)
         self._export_btn.clicked.connect(self._export_csv)
         btn_layout.addWidget(self._export_btn)
@@ -231,14 +231,12 @@ class PodPinterestExplorerPage(QWidget):
         if not self._data:
             QMessageBox.warning(self, "No Data", "Nothing to export.")
             return
-        from PyQt6.QtWidgets import QFileDialog
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", "pinterest_explorer.csv", "CSV Files (*.csv)"
-        )
+        import csv
+        from scout.gui.export_helper import get_export_path
+        filepath, delimiter = get_export_path(self, "pinterest_explorer.csv", "Export")
         if filepath:
-            import csv
             with open(filepath, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=POD_PEX_COLUMNS)
+                writer = csv.DictWriter(f, fieldnames=POD_PEX_COLUMNS, delimiter=delimiter)
                 writer.writeheader()
                 for item in self._data:
                     row = {col: item.get(col, "") for col in POD_PEX_COLUMNS}

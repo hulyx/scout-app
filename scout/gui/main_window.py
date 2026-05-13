@@ -311,6 +311,7 @@ class MainWindow(QMainWindow):
         self._pod_source_combo.addItem("🛒  Amazon", "amazon")
         self._pod_source_combo.addItem("🔍  Google", "google")
         self._pod_source_combo.addItem("📌  Pinterest", "pinterest")
+        self._pod_source_combo.addItem("\U0001f3a8  Redbubble", "redbubble")
         self._pod_source_combo.setFixedHeight(36)
         self._pod_source_combo.currentIndexChanged.connect(self._on_pod_source_changed)
         pod_layout.addWidget(self._pod_source_combo)
@@ -336,6 +337,10 @@ class MainWindow(QMainWindow):
             "pinterest": {
                 "label": "  PINTEREST TOOLS",
                 "pages": [("📌", "Pinterest Explorer")],
+            },
+            "redbubble": {
+                "label": "  REDBUBBLE TOOLS",
+                "pages": [("\U0001f3a8", "Bubble Trends")],
             },
         }
 
@@ -736,6 +741,7 @@ class MainWindow(QMainWindow):
             from scout.gui.pages.pod_trend_discovery_page import PodTrendDiscoveryPage
             from scout.gui.pages.pod_amazon_trends_page import PodAmazonTrendsPage
             from scout.gui.pages.pod_nichebloom_page import PodNicheBloomPage
+            from scout.gui.pages.pod_bubbletrends_page import PodBubbleTrendsPage
 
             self._pod_page_factories = {
                 "Keywords": PodKeywordsPage,
@@ -750,6 +756,7 @@ class MainWindow(QMainWindow):
                 "Trend Scout": PodTrendDiscoveryPage,
                 "Amazon Trends": PodAmazonTrendsPage,
                 "Bloom Trends": PodNicheBloomPage,
+                "Bubble Trends": PodBubbleTrendsPage,
             }
         except Exception as e:
             print(f'Failed to register POD pages: {e}')
@@ -868,6 +875,7 @@ class MainWindow(QMainWindow):
             "amazon":    "Keywords",
             "google":    "Trending",
             "pinterest": "Pinterest Explorer",
+            "redbubble": "Bubble Trends",
         }.get(source, "Keywords")
         self._switch_pod_page(first_page)
 
