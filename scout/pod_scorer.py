@@ -5,17 +5,14 @@ from typing import Dict, Any, List
 
 
 POD_DEFAULT_WEIGHTS = {
-    'merch_autocomplete': 0.14,    # Position in Amazon Merch AC
-    'etsy_competition': 0.11,     # Competition on Etsy (inversed: lower = better)
-    'redbubble_competition': 0.09, # Competition on Redbubble (inversed)
-    'spreadshirt_presence': 0.05, # Presence on Spreadshirt
-    'pinterest_demand': 0.12,   # Demand signal from Pinterest (boards + repins)
-    'reddit_demand': 0.13,       # Demand signal from Reddit
-    'google_trends_score': 0.11, # Google Trends score (interest + trend)
-    'google_suggest': 0.07,        # Google Suggest position
-    'avg_price_score': 0.10,     # Average price (too low = bad signal)
-    'niche_specificity': 0.05,   # Specificity of niche (long-tail = better)
-    'seasonal_risk': 0.03,        # Seasonal risk (pics = risk)
+    'merch_autocomplete': 0.19,    # Position in Amazon Merch AC
+    'pinterest_demand': 0.16,   # Demand signal from Pinterest (boards + repins)
+    'reddit_demand': 0.17,       # Demand signal from Reddit
+    'google_trends_score': 0.15, # Google Trends score (interest + trend)
+    'google_suggest': 0.09,        # Google Suggest position
+    'avg_price_score': 0.13,     # Average price (too low = bad signal)
+    'niche_specificity': 0.07,   # Specificity of niche (long-tail = better)
+    'seasonal_risk': 0.04,        # Seasonal risk (pics = risk)
 }
 
 
@@ -24,25 +21,6 @@ def normalize_merch_position(position: int) -> float:
     if not position:
         return 0.5
     return max(0.0, 1.0 - (position - 1) / 20.0)
-
-
-def normalize_etsy_competition(count: int) -> float:
-    """Normalize Etsy competition count (lower = better)."""
-    if not count:
-        return 1.0
-    return 1.0 / (1.0 + count / 5000.0)
-
-
-def normalize_redbubble_competition(count: int) -> float:
-    """Normalize Redbubble competition (lower = better)."""
-    if not count:
-        return 1.0
-    return 1.0 / (1.0 + count / 10000.0)
-
-
-def normalize_spreadshirt_presence(has_presence: bool) -> float:
-    """Normalize Spreadshirt presence."""
-    return 1.0 if has_presence else 0.5
 
 
 def normalize_pinterest_demand(board_followers: int, pin_count_estimate: int) -> float:
@@ -112,7 +90,7 @@ def score_pod_keyword(keyword_data: Dict[str, Any], weights: Dict[str, float] = 
     Score a POD keyword using weighted components.
     
     Args:
-        keyword_data: Dict with keys like merch_ac_position, etsy_competition, etc.
+        keyword_data: Dict with scoring data fields
         weights: Optional custom weights (defaults to POD_DEFAULT_WEIGHTS)
     
     Returns:
@@ -131,25 +109,6 @@ def score_pod_keyword(keyword_data: Dict[str, Any], weights: Dict[str, float] = 
         score = normalize_merch_position(keyword_data['merch_ac_position'])
         total_score += score * weights['merch_autocomplete']
         total_weight += weights['merch_autocomplete']
-    
-    # Etsy competition
-    if 'etsy_competition' in weights and 'etsy_competition' in keyword_data:
-        score = normalize_etsy_competition(keyword_data['etsy_competition'])
-        total_score += score * weights['etsy_competition']
-        total_weight += weights['etsy_competition']
-    
-    # Redbubble competition
-    if 'redbubble_competition' in weights and 'redbubble_competition' in keyword_data:
-        score = normalize_redbubble_competition(keyword_data['redbubble_competition'])
-        total_score += score * weights['redbubble_competition']
-        total_weight += weights['redbubble_competition']
-    
-    # Spreadshirt presence
-    if 'spreadshirt_presence' in weights:
-        has_presence = keyword_data.get('spreadshirt_presence', False)
-        score = normalize_spreadshirt_presence(has_presence)
-        total_score += score * weights['spreadshirt_presence']
-        total_weight += weights['spreadshirt_presence']
     
     # Pinterest demand
     if 'pinterest_demand' in weights:
@@ -206,8 +165,6 @@ if __name__ == '__main__':
     test_keyword = {
         'keyword': 'funny cat mug',
         'merch_ac_position': 3,
-        'etsy_competition': 2500,
-        'redbubble_competition': 5000,
         'pinterest_board_followers': 3000,
         'pinterest_pin_count': 8000,
         'reddit_score': 45.0,

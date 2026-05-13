@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px; min-height: 240px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px; background: #1a1a2e; color: #e0e0e0; padding: 12px;
+    }
+    .header {
+      display: flex; align-items: center; gap: 8px;
+      padding-bottom: 8px; border-bottom: 1px solid #333;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; flex-shrink: 0;
+    }
+    .status-dot.online { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+    .status-dot.offline { background: #f44336; box-shadow: 0 0 6px #f44336; }
+    .title { font-weight: 600; font-size: 14px; flex: 1; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; }
+    .label { color: #888; }
+    .value { font-weight: 500; }
+    button {
+      width: 100%; padding: 8px; margin-top: 8px;
+      border: 1px solid #444; border-radius: 4px;
+      background: #16213e; color: #e0e0e0; cursor: pointer;
+    }
+    button:hover { background: #0f3460; }
+    button.primary { background: #0f3460; border-color: #e94560; }
+    .log-area {
+      margin-top: 8px; padding: 6px;
+      background: #111; border-radius: 4px;
+      max-height: 140px; overflow-y: auto;
+      font-size: 11px; line-height: 1.4;
+    }
+    .log-area div { border-bottom: 1px solid #222; padding: 2px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="status-dot offline" id="statusDot"></span>
+    <span class="title">Scout Companion</span>
+    <span id="bridgeStatus">offline</span>
+  </div>
+
+  <div class="row">
+    <span class="label">Pending commands</span>
+    <span class="value" id="pendingCount">0</span>
+  </div>
+  <div class="row">
+    <span class="label">Active tabs</span>
+    <span class="value" id="activeTabs">0</span>
+  </div>
+
+  <button class="primary" id="toggleBtn">Pause</button>
+  <button id="testBtn">Test Bridge</button>
+
+  <div class="log-area" id="logArea"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

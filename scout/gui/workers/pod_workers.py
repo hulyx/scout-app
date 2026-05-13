@@ -5,6 +5,7 @@ from scout.collectors import pod_reddit_trends, pod_google_trends, pod_spreadshi
 from scout.pod_scorer import score_pod_keyword, POD_DEFAULT_WEIGHTS
 from scout.db import PodKeywordRepository
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 
 class PodMineWorker(BaseWorker):
@@ -1149,3 +1150,433 @@ class PodPinterestExplorerWorker(BaseWorker):
         )
         self.status.emit(f"Found {len(combined)} results")
         return combined
+
+
+class PodClusterWorker(BaseWorker):
+    """Cluster keywords into groups by semantic similarity using TF-IDF."""
+
+    def __init__(self, keywords, threshold=0.4, parent=None):
+        super().__init__(parent)
+        self.keywords = keywords
+        self.threshold = threshold
+
+    def run_task(self):
+        from scout.nlp_cluster import cluster_keywords
+        self.status.emit(f"Clustering {len(self.keywords)} keywords...")
+        kw_list = [kw.get("keyword", "") if isinstance(kw, dict) else kw
+                   for kw in self.keywords]
+        clusters = cluster_keywords(kw_list, threshold=self.threshold)
+        self.log.emit(f"Found {len([c for c in clusters if c['size'] >= 2])} clusters")
+        return clusters
+
+
+class PodBSRAnalyzerWorker(BaseWorker):
+    """Scrape Amazon BSR for a list of ASINs."""
+
+    def __init__(self, asins, parent=None):
+        super().__init__(parent)
+        self.asins = asins
+
+    def run_task(self):
+        from scout.collectors.pod_bsr_scraper import scrape_pod_bsr
+        import time
+
+        results = []
+        total = len(self.asins)
+        for i, asin in enumerate(self.asins):
+            if self.is_cancelled:
+                break
+            asin = asin.strip()
+            if not asin:
+                continue
+            self.status.emit(f"Scraping {asin} ({i+1}/{total})...")
+            self.progress.emit(i + 1, total)
+            result = scrape_pod_bsr(asin)
+            results.append(result)
+            if i < total - 1:
+                time.sleep(1.0)
+
+        self.log.emit(f"Scraped {len(results)} ASINs")
+        return results
+
+
+class PodExtensionBridgeWorker(BaseWorker):
+    """Execute POD scrapes via the browser extension bridge.
+    Falls back to direct Python scraping if the bridge is unreachable.
+    """
+
+    def __init__(self, action, params, timeout=60, parent=None):
+        super().__init__(parent)
+        self.action = action
+        self.params = params
+        self.timeout = timeout
+
+    def run_task(self):
+        from scout.extension_bridge import is_extension_available, BRIDGE_PORT
+        import urllib.request
+        import json
+
+        if not is_extension_available():
+            self.log.emit("Bridge not available, falling back to direct scrape")
+            return self._fallback()
+
+        self.status.emit(f"Sending {self.action} to extension...")
+        self.log.emit(f"Bridge command: {self.action} params={self.params}")
+
+        # Queue the command via POST /api/execute
+        try:
+            body = json.dumps({"action": self.action, "params": self.params}).encode()
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{BRIDGE_PORT}/api/execute",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urllib.request.urlopen(req, timeout=5)
+            result = json.loads(resp.read().decode())
+            command_id = result.get("id")
+            if not command_id:
+                raise RuntimeError("No command id returned")
+        except Exception as e:
+            self.log.emit(f"Bridge execute error: {e}, falling back")
+            return self._fallback()
+
+        # Poll for result (the bridge's execute method handles blocking,
+        # but we do it via repeated GET to /api/result not directly possible;
+        # instead we use direct HTTP polling for simplicity from a worker)
+        self.status.emit("Waiting for extension result...")
+        deadline = __import__("time").time() + self.timeout
+        while __import__("time").time() < deadline:
+            if self.is_cancelled:
+                return {"status": "cancelled"}
+            try:
+                req2 = urllib.request.Request(
+                    f"http://127.0.0.1:{BRIDGE_PORT}/api/result/{command_id}",
+                    method="POST",
+                    headers={"Content-Type": "application/json"},
+                    data=json.dumps({"status": "poll"}).encode(),
+                )
+                resp2 = urllib.request.urlopen(req2, timeout=5)
+                result_data = json.loads(resp2.read().decode())
+                if result_data.get("status") in ("success", "error"):
+                    self.progress.emit(100, 100)
+                    return result_data
+            except Exception:
+                pass
+            __import__("time").sleep(1.0)
+
+        self.log.emit("Bridge result timed out, falling back")
+        return self._fallback()
+
+    def _fallback(self):
+        """Fall back to the original direct scraping logic."""
+        self.log.emit(f"Direct scraping {self.action}...")
+        if self.action == "search_etsy":
+            from scout.collectors.pod_etsy_scraper import scrape_etsy_search
+            data = scrape_etsy_search(self.params.get("query", ""))
+            return {"status": "success", "data": data}
+        elif self.action == "search_redbubble":
+            from scout.collectors.pod_redbubble_scraper import scrape_redbubble_search
+            data = scrape_redbubble_search(self.params.get("query", ""))
+            return {"status": "success", "data": data}
+        elif self.action == "search_spreadshirt":
+            from scout.collectors.pod_spreadshirt_scraper import scrape_spreadshirt_search
+            data = scrape_spreadshirt_search(self.params.get("query", ""))
+            return {"status": "success", "data": data}
+        elif self.action == "search_pinterest":
+            from scout.collectors.pod_pinterest_scraper import scrape_pinterest_search
+            data = scrape_pinterest_search(self.params.get("query", ""))
+            return {"status": "success", "data": data}
+        elif self.action == "get_bsr":
+            from scout.collectors.pod_bsr_scraper import scrape_pod_bsr
+            data = scrape_pod_bsr(self.params.get("asin", ""))
+            return {"status": "success", "data": data}
+        elif self.action == "get_google_suggest":
+            from scout.collectors.pod_google_suggest import get_suggestions
+            sugs = get_suggestions(self.params.get("query", ""), depth=1)
+            return {"status": "success", "data": {"suggestions": sugs}}
+        else:
+            return {"status": "error", "error": f"Unknown action: {self.action}"}
+
+
+TREND_SEEDS = [
+    # Apparel / T-shirt niches
+    "funny t-shirt", "cat lover", "dog mom", "dad humor",
+    "vintage retro", "funny birthday", "pun shirt", "sarcastic",
+    "minimalist shirt", "animal lover", "mom life", "dad life",
+    # Hobbies & Lifestyle
+    "gym motivation", "yoga lover", "running motivation",
+    "gamer gift", "book lover", "fishing gift", "soccer mom",
+    # Professions & Relationships
+    "nurse gift", "teacher appreciation", "grandma gift",
+    "wedding gift", "family reunion",
+    # Seasonal / Events
+    "christmas gift", "halloween shirt", "beach vacation",
+    # Interests
+    "coffee mug", "wine lover", "beer gift", "grill master",
+    "camping gear", "hiking shirt", "music lover",
+    # Niche
+    "mental health", "anxiety gift", "therapy gift",
+    "retired shirt", "office humor", "sarcastic mug",
+]
+
+MIN_TREND_SEEDS = 10  # minimum viable seeds
+
+
+class PodTrendDiscoveryWorker(BaseWorker):
+    """Multi-source trend discovery across Google Suggest, Amazon Bestsellers,
+    Amazon Movers & Shakers, and Redbubble Popular.
+    Combines all sources → NLP clustering → cross-source scoring.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def run_task(self):
+        from scout.bridge_client import (
+            bridge_google_suggest,
+            bridge_amazon_bestsellers,
+            bridge_amazon_movers,
+        )
+        from scout.nlp_cluster import cluster_keywords
+
+        all_items = []
+        _lock = threading.Lock()
+
+        def _add_phrase(phrase, source, seed=None):
+            with _lock:
+                all_items.append({"phrase": phrase, "source": source, "seed": seed})
+
+        # ── Phase 1: Google Suggest (parallel, 10 threads) ──
+        self.log.emit("Phase 1/3: Google Suggest keyword expansion (10 threads)")
+        self.status.emit("Google Suggest: starting parallel fetch...")
+        self.progress.emit(1, 5)
+        if not self.is_cancelled:
+            with ThreadPoolExecutor(max_workers=10) as pool:
+                fut_to_seed = {pool.submit(bridge_google_suggest, seed): seed for seed in TREND_SEEDS}
+                done = 0
+                total = len(fut_to_seed)
+                for fut in as_completed(fut_to_seed):
+                    if self.is_cancelled:
+                        pool.shutdown(wait=False, cancel_futures=True)
+                        break
+                    seed = fut_to_seed[fut]
+                    done += 1
+                    try:
+                        sugs = fut.result()
+                    except Exception as e:
+                        self.log.emit(f"  {seed}: error - {e}")
+                        continue
+                    if sugs:
+                        for s in sugs:
+                            s = s.strip().lower()
+                            if len(s) >= 5:
+                                _add_phrase(s, "google_suggest", seed)
+                        self.log.emit(f"  {seed}: {len(sugs)} suggestions")
+                    self.status.emit(f"Google Suggest: {done}/{total} seeds")
+        n_google = sum(1 for x in all_items if x['source'] == 'google_suggest')
+        self.log.emit(f"  → {n_google} total from Google Suggest")
+
+        # ── Phase 2: Amazon Bestsellers ──
+        self.log.emit("Phase 2/3: Amazon Bestsellers")
+        self.progress.emit(2, 5)
+        if not self.is_cancelled:
+            self.status.emit("Amazon Bestsellers (via extension bridge)...")
+            try:
+                bs = bridge_amazon_bestsellers()
+                if bs:
+                    count = 0
+                    for item in (bs.get("items") or []):
+                        title = item.get("title", "").strip().lower()
+                        if len(title) >= 5:
+                            _add_phrase(title, "amazon_bestseller")
+                            count += 1
+                    self.log.emit(f"  Amazon Bestsellers: {count} products")
+            except Exception as e:
+                self.log.emit(f"  Amazon Bestsellers: error - {e}")
+
+        # ── Phase 3: Amazon Movers & Shakers ──
+        self.log.emit("Phase 3/3: Amazon Movers & Shakers")
+        self.progress.emit(3, 5)
+        if not self.is_cancelled:
+            self.status.emit("Amazon Movers & Shakers (via extension bridge)...")
+            try:
+                mv = bridge_amazon_movers()
+                if mv:
+                    count = 0
+                    for item in (mv.get("items") or []):
+                        title = item.get("title", "").strip().lower()
+                        if len(title) >= 5:
+                            _add_phrase(title, "amazon_mover")
+                            count += 1
+                    self.log.emit(f"  Amazon Movers: {count} products")
+            except Exception as e:
+                self.log.emit(f"  Amazon Movers: error - {e}")
+
+        if not all_items:
+            self.log.emit("No data collected from any source")
+            return []
+
+        # ── Phase 4: NLP clustering + cross-source scoring ──
+        self.progress.emit(4, 5)
+        phrases = list(set(x["phrase"] for x in all_items))
+        phrase_to_items = {}
+        for x in all_items:
+            phrase_to_items.setdefault(x["phrase"], []).append(x)
+
+        self.status.emit(f"Clustering {len(phrases)} items from all sources...")
+        clusters = cluster_keywords(phrases, threshold=0.35, min_cluster_size=2)
+
+        results = []
+        for cl in clusters:
+            if cl.get("cluster", -1) < 0:
+                continue
+
+            kws = cl.get("keywords", [])
+            sources = set()
+            seeds_used = set()
+            for kw in kws:
+                for item in phrase_to_items.get(kw, []):
+                    sources.add(item["source"])
+                    if item.get("seed"):
+                        seeds_used.add(item["seed"])
+
+            source_count = len(sources)
+            cluster_score = len(kws) * source_count
+
+            if "amazon_bestseller" in sources:
+                cluster_score = int(cluster_score * 1.3)
+            if "amazon_mover" in sources:
+                cluster_score = int(cluster_score * 1.2)
+
+            results.append({
+                "score": cluster_score,
+                "title": cl.get("label", kws[0]),
+                "seed": ", ".join(sorted(seeds_used)[:3]) if seeds_used else "amazon",
+                "seeds": list(seeds_used) if seeds_used else ["amazon"],
+                "keywords": kws,
+                "cluster_size": len(kws),
+                "seed_diversity": len(seeds_used) or source_count,
+                "sources": list(sources),
+            })
+
+        results.sort(key=lambda x: (-x["score"], x["title"]))
+
+        n_amz_bs = sum(1 for x in all_items if x['source'] == 'amazon_bestseller')
+        n_amz_mv = sum(1 for x in all_items if x['source'] == 'amazon_mover')
+
+        self.progress.emit(5, 5)
+        self.status.emit(
+            f"Found {len(results)} trending themes "
+            f"(Google:{n_google} | BS:{n_amz_bs} | MV:{n_amz_mv})"
+        )
+        self.log.emit(
+            f"Top: {results[0]['title'] if results else '—'} "
+            f"score={results[0]['score'] if results else 0} "
+            f"from {results[0].get('sources', []) if results else ''}"
+        )
+        return results
+
+
+class PodNicheBloomWorker(BaseWorker):
+    """Fetch and explore NicheBloom's 100 curated POD niches."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def run_task(self):
+        from scout.collectors.pod_nichebloom_collector import scrape_niche_list
+
+        self.status.emit("Fetching NicheBloom trends...")
+        self.progress.emit(0, 1)
+        self.log.emit("Scraping 100 curated POD niches from NicheBloom")
+
+        try:
+            niches = scrape_niche_list()
+            if not niches:
+                self.log.emit("No niches found — site may be unavailable")
+                return []
+            self.log.emit(f"Found {len(niches)} niches")
+            # Sort by bloom score descending
+            niches.sort(key=lambda x: (-x.get("bloom_score", 0), x.get("id", 0)))
+            self.status.emit(f"{len(niches)} niches loaded")
+            return niches
+        except Exception as e:
+            self.log.emit(f"Error: {e}")
+            return []
+
+
+class PodAmazonTrendsWorker(BaseWorker):
+    """Fetch current Amazon Bestsellers and Movers & Shakers in Fashion
+    via the extension bridge, and return combined product listings."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def _fetch_source(self, name, bridge_fn):
+        """Fetch one source (bestsellers or movers). Returns list of {title, source, rank_type}."""
+        results = []
+        self.status.emit(f"Amazon {name}...")
+        try:
+            data = bridge_fn()
+            if data is None:
+                self.log.emit(f"  {name}: bridge unavailable — extension not loaded?")
+                return results
+            items = data.get("items") or []
+            if not items:
+                self.log.emit(f"  {name}: bridge returned 0 products — page structure may have changed")
+                return results
+            for item in items:
+                title = item.get("title", "").strip()
+                if title:
+                    results.append({
+                        "title": title,
+                        "source": name,
+                        "rank_type": name.lower(),
+                    })
+            self.log.emit(f"  {name}: {len(results)} products")
+        except Exception as e:
+            self.log.emit(f"  {name}: error - {e}")
+        return results
+
+    def run_task(self):
+        from scout.extension_bridge import is_extension_connected, is_extension_available
+
+        self.status.emit("Checking extension bridge...")
+        self.progress.emit(0, 2)
+
+        if not is_extension_available():
+            self.log.emit("❌ Bridge server not running — restart the app")
+            self.status.emit("Bridge unavailable")
+            return []
+
+        if not is_extension_connected():
+            self.log.emit("⚠  Extension not detected — load it in Chrome:")
+            self.log.emit("   chrome://extensions → Mode développeur → Charger extension non empaquetée")
+            self.log.emit("   Select scout-extension/ folder, then reload this page")
+            self.status.emit("Extension not connected in browser")
+            return []
+
+        self.log.emit("Extension OK — fetching Amazon trends...")
+        self.status.emit("Fetching Amazon trends...")
+        self.log.emit("Sources: Amazon Bestsellers + Movers & Shakers")
+
+        from scout.bridge_client import bridge_amazon_bestsellers, bridge_amazon_movers
+
+        results = []
+
+        # Bestsellers
+        if not self.is_cancelled:
+            results.extend(self._fetch_source("Bestseller", bridge_amazon_bestsellers))
+        self.progress.emit(1, 2)
+
+        # Movers
+        if not self.is_cancelled:
+            results.extend(self._fetch_source("Mover", bridge_amazon_movers))
+        self.progress.emit(2, 2)
+
+        self.status.emit(f"Found {len(results)} trending Amazon products")
+        bs_count = sum(1 for r in results if r['rank_type'] == 'bestseller')
+        mv_count = sum(1 for r in results if r['rank_type'] == 'mover')
+        self.log.emit(f"Bestsellers: {bs_count}, Movers: {mv_count}")
+        return results

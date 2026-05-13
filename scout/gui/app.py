@@ -41,6 +41,15 @@ def main():
     from scout.gui.main_window import MainWindow
     window = MainWindow()
 
+    # Start extension bridge (background thread, port 8765)
+    try:
+        from scout.extension_bridge import ExtensionBridge
+        _bridge = ExtensionBridge(port=8765)
+        _bridge.start()
+        window._extension_bridge = _bridge
+    except Exception:
+        pass  # Bridge is optional
+
     # Restore window geometry
     settings = QSettings()
     geometry = settings.value("window/geometry")

@@ -307,10 +307,10 @@ class MainWindow(QMainWindow):
         pod_layout.addWidget(pod_source_label)
 
         self._pod_source_combo = QComboBox()
+        self._pod_source_combo.addItem("🔥  Trend Scout", "trendscout")
         self._pod_source_combo.addItem("🛒  Amazon", "amazon")
         self._pod_source_combo.addItem("🔍  Google", "google")
         self._pod_source_combo.addItem("📌  Pinterest", "pinterest")
-        self._pod_source_combo.addItem("🎨  Etsy", "etsy")
         self._pod_source_combo.setFixedHeight(36)
         self._pod_source_combo.currentIndexChanged.connect(self._on_pod_source_changed)
         pod_layout.addWidget(self._pod_source_combo)
@@ -318,10 +318,16 @@ class MainWindow(QMainWindow):
 
         # ── POD sections per source ─────────────────────────────────────────────
         POD_SOURCE_SECTIONS = {
+            "trendscout": {
+                "label": "  TREND SCOUT",
+                "pages": [("🔥", "Trend Scout"), ("🌳", "Bloom Trends")],
+            },
             "amazon": {
                 "label": "  AMAZON TOOLS",
                 "pages": [("🔍", "Keywords"), ("🔬", "Niche Analyzer"),
-                          ("🔎", "Product Lookup")],
+                          ("🔎", "Product Lookup"),
+                          ("📊", "BSR Analyzer"), ("🔬", "Cluster"),
+                          ("🛒", "Amazon Trends")],
             },
             "google": {
                 "label": "  GOOGLE TOOLS",
@@ -330,10 +336,6 @@ class MainWindow(QMainWindow):
             "pinterest": {
                 "label": "  PINTEREST TOOLS",
                 "pages": [("📌", "Pinterest Explorer")],
-            },
-            "etsy": {
-                "label": "  ETSY TOOLS",
-                "pages": [("🏷", "Competitors"), ("🔎", "Product Lookup")],
             },
         }
 
@@ -437,11 +439,22 @@ class MainWindow(QMainWindow):
         # Status bar
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
+
+        self._bridge_indicator = QLabel("●  Bridge")
+        self._bridge_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._bridge_indicator.mousePressEvent = lambda e: self._show_bridge_dialog()
+        self._status_bar.addPermanentWidget(self._bridge_indicator)
+
         self._update_status_bar()
 
         self._status_timer = QTimer(self)
         self._status_timer.timeout.connect(self._update_status_bar)
         self._status_timer.start(30000)
+
+        self._bridge_timer = QTimer(self)
+        self._bridge_timer.timeout.connect(self._update_bridge_indicator)
+        self._bridge_timer.start(5000)
+        self._update_bridge_indicator()
 
         # Apply initial source visibility
         self._on_source_changed()
@@ -715,20 +728,28 @@ class MainWindow(QMainWindow):
             from scout.gui.pages.pod_trending_page import PodTrendingPage
             from scout.gui.pages.pod_niche_analyzer_page import PodNicheAnalyzerPage
             from scout.gui.pages.pod_find_for_me_page import PodFindForMePage
-            from scout.gui.pages.pod_competitors_page import PodCompetitorsPage
             from scout.gui.pages.pod_pinterest_explorer_page import PodPinterestExplorerPage
             from scout.gui.pages.pod_product_lookup_page import PodProductLookupPage
             from scout.gui.pages.pod_market_overview_page import PodMarketOverviewPage
+            from scout.gui.pages.pod_cluster_page import PodClusterPage
+            from scout.gui.pages.pod_bsr_analyzer_page import PodBSRAnalyzerPage
+            from scout.gui.pages.pod_trend_discovery_page import PodTrendDiscoveryPage
+            from scout.gui.pages.pod_amazon_trends_page import PodAmazonTrendsPage
+            from scout.gui.pages.pod_nichebloom_page import PodNicheBloomPage
 
             self._pod_page_factories = {
                 "Keywords": PodKeywordsPage,
                 "Trending": PodTrendingPage,
                 "Niche Analyzer": PodNicheAnalyzerPage,
                 "Find For Me": PodFindForMePage,
-                "Competitors": PodCompetitorsPage,
                 "Pinterest Explorer": PodPinterestExplorerPage,
                 "Product Lookup": PodProductLookupPage,
                 "Market Overview": PodMarketOverviewPage,
+                "BSR Analyzer": PodBSRAnalyzerPage,
+                "Cluster": PodClusterPage,
+                "Trend Scout": PodTrendDiscoveryPage,
+                "Amazon Trends": PodAmazonTrendsPage,
+                "Bloom Trends": PodNicheBloomPage,
             }
         except Exception as e:
             print(f'Failed to register POD pages: {e}')
@@ -843,10 +864,10 @@ class MainWindow(QMainWindow):
             widget.setVisible(src == source)
         # Default page per source
         first_page = {
+            "trendscout": "Trend Scout",
             "amazon":    "Keywords",
             "google":    "Trending",
             "pinterest": "Pinterest Explorer",
-            "etsy":      "Competitors",
         }.get(source, "Keywords")
         self._switch_pod_page(first_page)
 
@@ -918,6 +939,76 @@ class MainWindow(QMainWindow):
             )
         except Exception:
             self._status_bar.showMessage("  Scout Ready")
+
+    def _update_bridge_indicator(self):
+        connected = False
+        try:
+            from scout.extension_bridge import is_extension_connected
+            connected = is_extension_connected()
+        except Exception:
+            pass
+        color = "#a6e3a1" if connected else "#f38ba8"
+        tip = "Extension connected" if connected else "Extension not connected"
+        self._bridge_indicator.setStyleSheet(f"color: {color}; font-size: 12px; padding: 0 8px;")
+        self._bridge_indicator.setToolTip(tip)
+
+    def _show_bridge_dialog(self):
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
+        connected = False
+        try:
+            from scout.extension_bridge import is_extension_connected
+            connected = is_extension_connected()
+        except Exception:
+            pass
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Extension Bridge Status")
+        dlg.resize(520, 360)
+        dlg.setStyleSheet("background: #1e1e2e; color: #cdd6f4;")
+
+        if connected:
+            html = """<h2 style="color:#a6e3a1;">✅ Bridge Connected</h2>
+<p>The Scout Companion browser extension is actively connected.</p>
+<p>The bridge is running on <code>localhost:8765</code> and communicating
+with your browser. Amazon trends, BSR analysis, and other extension-based
+features are ready to use.</p>
+<p><b>Connected sources:</b></p>
+<ul>
+  <li>Amazon Bestsellers</li>
+  <li>Amazon Movers &amp; Shakers</li>
+  <li>Amazon Search / BSR</li>
+  <li>Google Suggest</li>
+</ul>"""
+        else:
+            html = """<h2 style="color:#f38ba8;">❌ Bridge Not Connected</h2>
+<p>The Scout Companion extension is not detected in your browser.</p>
+<p><b>To enable extension features, follow these steps:</b></p>
+<ol>
+  <li>Open Chrome and go to <code>chrome://extensions</code></li>
+  <li>Enable <b>Developer mode</b> (toggle in top-right corner)</li>
+  <li>Click <b>Load unpacked</b> and select the <code>scout-extension/</code> folder</li>
+  <li>Make sure the extension is enabled (toggle on)</li>
+  <li>Refresh this page or wait a few seconds</li>
+</ol>
+<p><b>What the bridge provides:</b></p>
+<ul>
+  <li>Amazon Bestsellers &amp; Movers data</li>
+  <li>Amazon BSR analysis (product rank)</li>
+  <li>Google Suggest keyword expansion</li>
+  <li>Cross-site trend discovery</li>
+</ul>
+<p><i>The bridge server is running — it just needs the extension
+to connect from your browser.</i></p>"""
+
+        layout = QVBoxLayout(dlg)
+        text = QTextEdit()
+        text.setReadOnly(True)
+        text.setHtml(html)
+        layout.addWidget(text, 1)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dlg.accept)
+        layout.addWidget(close_btn)
+        dlg.exec()
 
     def current_page_index(self):
         idx = self._stack.currentIndex()

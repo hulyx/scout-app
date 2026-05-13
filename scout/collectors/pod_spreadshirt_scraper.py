@@ -10,9 +10,21 @@ import re
 def scrape_spreadshirt_search(keyword: str, market: str = "com") -> Dict[str, Any]:
     """
     Scrape Spreadshirt search results for a keyword.
+
+    Tries the browser extension bridge first (renders JS properly).
+    Falls back to direct HTTP scraping if bridge unavailable.
+
     market: 'com' for US, 'fr' for France, 'de' for Germany.
     Returns: {"competition_count": int, "top_designs": list, "suggestions": list}
     """
+    try:
+        from scout.bridge_client import bridge_search_spreadshirt
+        bridge_result = bridge_search_spreadshirt(keyword)
+        if bridge_result is not None:
+            return bridge_result
+    except Exception:
+        pass
+
     result = {
         "competition_count": 0,
         "top_designs": [],

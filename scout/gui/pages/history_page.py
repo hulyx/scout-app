@@ -61,7 +61,10 @@ class HistoryPage(QWidget):
         for tool in ["Keywords", "Trending", "Competitors", "Ads", "Seeds", "ASIN Lookup",
                      "Google Trending", "Google Keywords", "Google Books",
                      "POD Amazon Keywords", "POD Trending", "POD Niche Analyzer",
-                     "POD Find For Me", "POD Competitors", "POD Seeds",
+                     "POD Find For Me", "POD Seeds",
+                     "POD Cluster", "POD BSR Analyzer",
+                     "POD Trend Scout", "POD Amazon Trends",
+                     "POD Bloom Trends",
                      "POD Pinterest", "POD Product Lookup", "POD Market Overview"]:
             self._filter_combo.addItem(f"{TOOL_ICONS.get(tool, '')} {tool}", tool)
         self._filter_combo.currentIndexChanged.connect(self._apply_filter)

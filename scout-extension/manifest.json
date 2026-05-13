@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Scout Companion",
+  "version": "1.0.0",
+  "description": "Scrapes POD sites via your browser session for KDP Scout",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "*://www.etsy.com/*",
+    "*://www.amazon.com/*",
+    "*://www.redbubble.com/*",
+    "*://www.spreadshirt.com/*",
+    "*://www.pinterest.com/*",
+    "*://www.google.com/*",
+    "http://localhost:8765/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Scout Companion"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://www.etsy.com/*"],
+      "js": ["content-etsy.js"]
+    },
+    {
+      "matches": ["*://www.amazon.com/*"],
+      "js": ["content-amazon.js"]
+    },
+    {
+      "matches": ["*://www.redbubble.com/shop/*"],
+      "js": ["content-redbubble.js"]
+    },
+    {
+      "matches": ["*://www.spreadshirt.com/shop/*"],
+      "js": ["content-spreadshirt.js"]
+    },
+    {
+      "matches": ["*://www.pinterest.com/*"],
+      "js": ["content-pinterest.js"]
+    }
+  ]
+}

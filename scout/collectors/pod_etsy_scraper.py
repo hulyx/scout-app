@@ -10,10 +10,21 @@ import re
 def scrape_etsy_search(keyword: str) -> Dict[str, Any]:
     """
     Scrape Etsy search results for a keyword.
-    
+
+    Tries the browser extension bridge first (renders JS properly).
+    Falls back to direct HTTP scraping if bridge unavailable.
+
     Returns:
         Dict with competition_count, top_listings, suggestions, avg_price
     """
+    try:
+        from scout.bridge_client import bridge_search_etsy
+        bridge_result = bridge_search_etsy(keyword)
+        if bridge_result is not None:
+            return bridge_result
+    except Exception:
+        pass
+
     result = {
         "competition_count": 0,
         "top_listings": [],
