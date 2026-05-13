@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodBubbleTrendsWorker
 from scout.gui.search_history import SearchHistory
 
@@ -32,18 +33,11 @@ class PodBubbleTrendsPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2> Bubble Trends (Redbubble)</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Trending keywords on Redbubble with real result counts, "
-            "aggregated by Bubble Trends. Data refreshes every 24 hours. "
-            "Sorted by result count (highest first)."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2> Bubble Trends (Redbubble)</h2>",
+                     "Trending keywords on Redbubble with real result counts, "
+                     "aggregated by Bubble Trends. Data refreshes every 24 hours. "
+                     "Sorted by result count (highest first).",
+                     title_style="color: #cba6f7;")
 
         btn_layout = QHBoxLayout()
 

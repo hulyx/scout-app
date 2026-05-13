@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodSeedsWorker
 from scout.gui.search_history import SearchHistory
 
@@ -38,16 +39,9 @@ class PodSeedsPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🌱 POD Seeds</h2>")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Generate seed keywords and enrich them with Pinterest trend data. "
-            "Higher Trend Score = more Pinterest buzz."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>🌱 POD Seeds</h2>",
+                     "Generate seed keywords and enrich them with Pinterest trend data. "
+                     "Higher Trend Score = more Pinterest buzz.")
 
         # Category selector
         category_group = QGroupBox("Generate Seeds")

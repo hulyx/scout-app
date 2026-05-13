@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
+from scout.gui.helpers import make_header
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.search_history import SearchHistory
 
@@ -33,8 +34,9 @@ class SeedsPage(QWidget):
         layout.setSpacing(12)
 
         # Header
-        header = QLabel("<h2>🌱 Seed Keywords</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>🌱 Seed Keywords</h2>",
+                     "Seed keywords are used as starting points for keyword mining. "
+                     "Add seeds here and use the Keywords page to mine from them.")
 
         # Add seed toolbar
         toolbar = QHBoxLayout()
@@ -74,15 +76,6 @@ class SeedsPage(QWidget):
         toolbar.addWidget(self._refresh_btn)
 
         layout.addLayout(toolbar)
-
-        # Info
-        info = QLabel(
-            "Seed keywords are used as starting points for keyword mining. "
-            "Add seeds here and use the Keywords page to mine from them."
-        )
-        info.setWordWrap(True)
-        info.setProperty("class", "info-text")
-        layout.addWidget(info)
 
         # Data table
         self._table = DataTable()

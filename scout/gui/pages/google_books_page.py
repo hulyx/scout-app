@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox,
     QLabel, QMessageBox, QLineEdit,
 )
+from scout.gui.helpers import make_header
 from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
@@ -112,8 +113,9 @@ class GoogleBooksPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>📚 Google Books Explorer</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>📚 Google Books Explorer</h2>",
+                     "Search books, analyze niche saturation, or view publication timelines "
+                     "using Google Books data. Switch between Search, Niche Analysis, and Timeline modes.")
 
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)

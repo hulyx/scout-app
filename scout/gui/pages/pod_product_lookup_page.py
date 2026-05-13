@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodProductLookupAmazonWorker
 from scout.gui.search_history import SearchHistory
 
@@ -23,17 +24,10 @@ class PodProductLookupPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🔎 Amazon Merch Product Lookup</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Enter an Amazon Merch ASIN (e.g. B09XYZ1234) or a full amazon.com product URL "
-            "to extract the title, bullet keywords, and price."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>🔎 Amazon Merch Product Lookup</h2>",
+                     "Enter an Amazon Merch ASIN (e.g. B09XYZ1234) or a full amazon.com product URL "
+                     "to extract the title, bullet keywords, and price.",
+                     title_style="color: #cba6f7;")
 
         input_group = QGroupBox("Product Input")
         input_layout = QFormLayout(input_group)

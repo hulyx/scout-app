@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
 
+from scout.gui.helpers import make_header
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
 from scout.gui.workers.base_worker import BaseWorker
@@ -325,8 +326,9 @@ class TrendingPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>📈 Amazon Trending</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>📈 Amazon Trending</h2>",
+                     "Discover trending books on Amazon across multiple marketplaces. "
+                     "Sources: Amazon Findings, Bestsellers, Movers & Shakers, Hot New Releases, Also Bought.")
 
         # ── Row 1: Source selector + mode-specific controls ──────────────
         toolbar = QHBoxLayout()

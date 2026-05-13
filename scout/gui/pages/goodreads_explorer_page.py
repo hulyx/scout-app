@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
+from scout.gui.helpers import make_header
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
 from scout.gui.workers.goodreads_worker import GoodreadsWorker
@@ -76,8 +77,9 @@ class GoodreadsExplorerPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>📚 Goodreads Explorer</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>📚 Goodreads Explorer</h2>",
+                     "Explore Goodreads books, analyze niches, search Open Library, "
+                     "browse shelves/tags, or run gap analysis between Goodreads and Amazon.")
 
         # Toolbar
         toolbar = QHBoxLayout()

@@ -3,7 +3,9 @@ from PyQt6.QtWidgets import (
     QComboBox, QMessageBox
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 
+from scout.gui.helpers import make_header
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.asin_input import ASINInput
 from scout.gui.widgets.progress_panel import ProgressPanel
@@ -35,8 +37,10 @@ class ASINLookupPage(QWidget):
         layout.setSpacing(12)
 
         # Header
-        header = QLabel("<h2>🔎 ASIN Lookup</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>🔎 ASIN Lookup</h2>",
+                     "Enter an ASIN to discover which keywords that book ranks for. "
+                     "'Auto' tries the fastest method first. 'Probe' checks Amazon autocomplete positions. "
+                     "'DataForSEO' uses the API for comprehensive data.")
 
         # Toolbar
         toolbar = QHBoxLayout()
@@ -56,16 +60,6 @@ class ASINLookupPage(QWidget):
 
         toolbar.addStretch()
         layout.addLayout(toolbar)
-
-        # Info
-        info = QLabel(
-            "Enter an ASIN to discover which keywords that book ranks for. "
-            "'Auto' tries the fastest method first. 'Probe' checks Amazon autocomplete positions. "
-            "'DataForSEO' uses the API for comprehensive data."
-        )
-        info.setWordWrap(True)
-        info.setProperty("class", "info-text")
-        layout.addWidget(info)
 
         # Results table
         self._table = DataTable()

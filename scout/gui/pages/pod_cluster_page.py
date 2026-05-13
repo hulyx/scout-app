@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodClusterWorker
 from scout.gui.search_history import SearchHistory
 
@@ -36,18 +37,11 @@ class PodClusterPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🔬 Keyword Clustering</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Paste a list of keywords (one per line) or send results from another tool. "
-            "Keywords are grouped by topic using TF-IDF similarity — "
-            "no external API calls, all processing is local."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>🔬 Keyword Clustering</h2>",
+                     "Paste a list of keywords (one per line) or send results from another tool. "
+                     "Keywords are grouped by topic using TF-IDF similarity — "
+                     "no external API calls, all processing is local.",
+                     title_style="color: #cba6f7;")
 
         input_group = QGroupBox("Input Keywords")
         input_layout = QVBoxLayout(input_group)

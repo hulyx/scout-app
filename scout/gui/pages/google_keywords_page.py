@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
+from scout.gui.helpers import make_header
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
 from scout.gui.workers.base_worker import BaseWorker
@@ -111,8 +112,9 @@ class GoogleKeywordsPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>\U0001f50d Google Keywords</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>\U0001f50d Google Keywords</h2>",
+                     "Enter a seed keyword and mine Google Suggest for hundreds of long-tail variations. "
+                     "Uses alphabet expansion + question patterns. No API key needed.")
 
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)
@@ -138,14 +140,6 @@ class GoogleKeywordsPage(QWidget):
 
         toolbar.addStretch()
         layout.addLayout(toolbar)
-
-        self._info_label = QLabel(
-            "Enter a seed keyword and mine Google Suggest for hundreds of long-tail variations. "
-            "Uses alphabet expansion + question patterns. No API key needed."
-        )
-        self._info_label.setWordWrap(True)
-        self._info_label.setProperty("class", "info-text")
-        layout.addWidget(self._info_label)
 
         self._table = DataTable()
         layout.addWidget(self._table, 1)

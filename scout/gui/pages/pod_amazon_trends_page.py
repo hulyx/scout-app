@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodAmazonTrendsWorker
 from scout.gui.search_history import SearchHistory
 
@@ -32,19 +33,12 @@ class PodAmazonTrendsPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🛒 Amazon Trends (POD)</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Scrapes Amazon Bestsellers in Fashion and Movers & Shakers "
-            "via the browser extension. Bestsellers = what's popular now. "
-            "Movers = products with the biggest sales rank gains — "
-            "perfect for spotting rising POD opportunities."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>🛒 Amazon Trends (POD)</h2>",
+                     "Scrapes Amazon Bestsellers in Fashion and Movers & Shakers "
+                     "via the browser extension. Bestsellers = what's popular now. "
+                     "Movers = products with the biggest sales rank gains — "
+                     "perfect for spotting rising POD opportunities.",
+                     title_style="color: #cba6f7;")
 
         btn_layout = QHBoxLayout()
 
@@ -68,6 +62,7 @@ class PodAmazonTrendsPage(QWidget):
         layout.addLayout(btn_layout)
 
         self._table = DataTable()
+        self._table._extra_context_actions = self._extra_table_actions
         layout.addWidget(self._table, 1)
 
         self._progress = ProgressPanel(show_log=True)
@@ -101,12 +96,16 @@ class PodAmazonTrendsPage(QWidget):
         self._worker = None
 
     def _populate_table(self):
+        import re
         data = []
         for item in self._trends_data:
+            title = item.get("title", "")
+            if re.search(r"out\s+of\s+\d+(\.\d+)?\s+stars?", title, re.IGNORECASE):
+                continue
             source = item.get("source", "")
             emoji = "🏆" if source == "Bestseller" else "📈"
             row = {
-                "title": item.get("title", ""),
+                "title": title,
                 "source": f"{emoji} {source}",
             }
             data.append(row)
@@ -130,6 +129,19 @@ class PodAmazonTrendsPage(QWidget):
                 for item in self._trends_data:
                     writer.writerow([item.get("title", ""), item.get("source", "")])
             QMessageBox.information(self, "Export done", f"Saved to {filepath}")
+
+    def _extra_table_actions(self, row_data: dict) -> list:
+        from PyQt6.QtGui import QAction
+        import urllib.parse
+        import webbrowser
+
+        title = (row_data.get("title") or "").strip()
+        if not title:
+            return []
+        action = QAction("🛒 Search on Amazon", self)
+        url = f"https://www.amazon.com/s?k={urllib.parse.quote(title)}"
+        action.triggered.connect(lambda: webbrowser.open(url))
+        return [action]
 
     def _clear_all(self):
         self._table.clear()

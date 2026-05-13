@@ -133,18 +133,10 @@ class TikTokTrendsPage(QWidget):
         layout.setSpacing(10)
 
         # Header
-        header = QLabel("🎵 TikTok BookTok Trends")
-        header.setStyleSheet("font-size: 24px; font-weight: bold; color: #cdd6f4;")
-        layout.addWidget(header)
-
-        # Description
-        desc = QLabel(
-            "Discover trending book genres and tropes on TikTok BookTok — "
-            "viral hashtags, view counts, emerging niches."
-        )
-        desc.setStyleSheet("color: #a6adc8; font-size: 13px;")
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
+        make_header(self, layout, "🎵 TikTok BookTok Trends",
+                     "Discover trending book genres and tropes on TikTok BookTok — "
+                     "viral hashtags, view counts, emerging niches.",
+                     title_style="font-size: 24px; font-weight: bold; color: #cdd6f4;")
 
         # Controls
         ctrl = QHBoxLayout()

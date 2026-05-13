@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodBSRAnalyzerWorker
 from scout.gui.search_history import SearchHistory
 
@@ -40,18 +41,11 @@ class PodBSRAnalyzerPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>📊 BSR Analyzer (POD)</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Enter Amazon ASINs (one per line) to fetch Best Sellers Rank "
-            "and estimate daily/monthly sales for POD products. "
-            "BSR is extracted from Amazon's server-rendered product pages."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>📊 BSR Analyzer (POD)</h2>",
+                     "Enter Amazon ASINs (one per line) to fetch Best Sellers Rank "
+                     "and estimate daily/monthly sales for POD products. "
+                     "BSR is extracted from Amazon's server-rendered product pages.",
+                     title_style="color: #cba6f7;")
 
         input_group = QGroupBox("ASINs")
         input_layout = QVBoxLayout(input_group)

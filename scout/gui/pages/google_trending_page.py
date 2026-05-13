@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
+from scout.gui.helpers import make_header
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
 from scout.gui.workers.base_worker import BaseWorker
@@ -189,8 +190,9 @@ class GoogleTrendingPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>📈 Google Trending</h2>")
-        layout.addWidget(header)
+        make_header(self, layout, "<h2>📈 Google Trending</h2>",
+                     "Discover trending topics and related queries from Google. "
+                     "Multiple modes: auto-discover via Google Suggest, trending now, related queries/topics.")
 
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)

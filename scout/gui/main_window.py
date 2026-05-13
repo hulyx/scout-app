@@ -443,6 +443,7 @@ class MainWindow(QMainWindow):
 
         # Status bar
         self._status_bar = QStatusBar()
+        self._status_bar.setFixedHeight(self._status_bar.sizeHint().height() + 20)
         self.setStatusBar(self._status_bar)
 
         self._bridge_indicator = QLabel("●  Bridge")

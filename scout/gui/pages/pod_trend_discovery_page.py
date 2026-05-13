@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodTrendDiscoveryWorker
 from scout.gui.search_history import SearchHistory
 
@@ -41,20 +42,13 @@ class PodTrendDiscoveryPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🔥 POD Trend Scout</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Discovers trending POD topics by expanding ~40 curated seed "
-            "keywords through Google Suggest, then groups them into thematic "
-            "clusters via NLP overlap. Hot trends surface as large clusters "
-            "spanning multiple seed categories. Uses the browser extension "
-            "if available, falls back to direct API."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>🔥 POD Trend Scout</h2>",
+                     "Discovers trending POD topics by expanding ~40 curated seed "
+                     "keywords through Google Suggest, then groups them into thematic "
+                     "clusters via NLP overlap. Hot trends surface as large clusters "
+                     "spanning multiple seed categories. Uses the browser extension "
+                     "if available, falls back to direct API.",
+                     title_style="color: #cba6f7;")
 
         btn_layout = QHBoxLayout()
 

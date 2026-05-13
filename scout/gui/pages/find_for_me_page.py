@@ -15,6 +15,7 @@ import webbrowser
 import urllib.parse
 from datetime import datetime
 
+from scout.gui.helpers import make_header
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QTextEdit, QSizePolicy, QScrollArea, QMenu,
@@ -874,16 +875,9 @@ class FindForMePage(QWidget):
         layout.setSpacing(10)
 
         # Header
-        header = QLabel("🎯 Find For Me — Niche Sniper")
-        header.setStyleSheet("font-size: 24px; font-weight: bold; color: #cdd6f4;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Auto-discovers the hottest KDP niches. Choose your depth, market type, and sources below."
-        )
-        desc.setStyleSheet("color: #a6adc8; font-size: 13px;")
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
+        make_header(self, layout, "🎯 Find For Me — Niche Sniper",
+                     "Auto-discovers the hottest KDP niches. Choose your depth, market type, and sources below.",
+                     title_style="font-size: 24px; font-weight: bold; color: #cdd6f4;")
 
         # Sources panel
         self._sources_panel = SourcesPanel()

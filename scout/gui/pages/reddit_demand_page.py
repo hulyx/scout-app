@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from scout.gui.helpers import make_header
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QTextEdit, QComboBox, QFrame, QSizePolicy,
@@ -126,18 +127,11 @@ class RedditDemandPage(QWidget):
         layout.setContentsMargins(16, 12, 16, 8)
         layout.setSpacing(10)
 
-        header = QLabel("🤖 Reddit Demand Mining")
-        header.setStyleSheet("font-size: 24px; font-weight: bold; color: #cdd6f4;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Mine book subreddits for real reader demand — "
-            "'looking for', 'suggest me', 'recommend me' posts. "
-            "No API key needed."
-        )
-        desc.setStyleSheet("color: #a6adc8; font-size: 13px;")
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
+        make_header(self, layout, "🤖 Reddit Demand Mining",
+                     "Mine book subreddits for real reader demand — "
+                     "'looking for', 'suggest me', 'recommend me' posts. "
+                     "No API key needed.",
+                     title_style="font-size: 24px; font-weight: bold; color: #cdd6f4;")
 
         # Controls
         ctrl = QHBoxLayout()

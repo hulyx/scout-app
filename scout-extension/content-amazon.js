@@ -18,11 +18,19 @@
         // Any title-like spans/divs inside grid items
         ...document.querySelectorAll("#gridItemRoot .p13n-sc-truncate, #gridItemRoot [class*=clamp], .zg-no-numbers [class*=clamp]"),
       ];
+      function isValidProductTitle(t) {
+        t = t.trim();
+        if (!t || t.length < 5) return false;
+        if (t.startsWith("$")) return false;
+        if (/out\s+of\s+\d+(\.\d+)?\s+stars/i.test(t)) return false;
+        if (/^\d+(\.\d+)?\s+out\s+of\s+5/i.test(t)) return false;
+        return true;
+      }
+
       sources.forEach(el => {
         let title = el.getAttribute("alt") || el.innerText || el.getAttribute("title") || "";
         title = title.trim();
-        // Skip price text or empty
-        if (!title || title.length < 3 || title.startsWith("$")) return;
+        if (!isValidProductTitle(title)) return;
         if (seen.has(title.toLowerCase())) return;
         seen.add(title.toLowerCase());
         items.push({ title, source: "amazon_bestseller" });
@@ -32,8 +40,7 @@
         const fallbacks = document.querySelectorAll("#gridItemRoot, .zg-no-numbers");
         fallbacks.forEach(card => {
           const text = (card.innerText || "").trim();
-          // Take first non-empty line as title
-          const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 5 && !l.startsWith("$"));
+          const lines = text.split("\n").map(l => l.trim()).filter(l => isValidProductTitle(l));
           if (lines.length) {
             const key = lines[0].toLowerCase();
             if (!seen.has(key)) {
@@ -61,7 +68,7 @@
       sources.forEach(el => {
         let title = el.getAttribute("alt") || el.innerText || el.getAttribute("title") || "";
         title = title.trim();
-        if (!title || title.length < 3 || title.startsWith("$")) return;
+        if (!isValidProductTitle(title)) return;
         if (seen.has(title.toLowerCase())) return;
         seen.add(title.toLowerCase());
         items.push({ title, source: "amazon_mover" });
@@ -70,7 +77,7 @@
         const fallbacks = document.querySelectorAll("#gridItemRoot, .zg-no-numbers");
         fallbacks.forEach(card => {
           const text = (card.innerText || "").trim();
-          const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 5 && !l.startsWith("$"));
+          const lines = text.split("\n").map(l => l.trim()).filter(l => isValidProductTitle(l));
           if (lines.length) {
             const key = lines[0].toLowerCase();
             if (!seen.has(key)) {

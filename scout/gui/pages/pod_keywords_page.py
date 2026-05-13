@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodMineAmazonWorker, PodScoreWorker
 from scout.gui.search_history import SearchHistory
 
@@ -41,17 +42,10 @@ class PodKeywordsPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>🔍 Amazon Merch Keywords</h2>")
-        header.setStyleSheet("color: #cba6f7;")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Mine keywords directly from Amazon Merch autocomplete. "
-            "Results show keyword position in Merch search suggestions."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>🔍 Amazon Merch Keywords</h2>",
+                     "Mine keywords directly from Amazon Merch autocomplete. "
+                     "Results show keyword position in Merch search suggestions.",
+                     title_style="color: #cba6f7;")
 
         search_group = QGroupBox("Search Parameters")
         search_layout = QFormLayout(search_group)

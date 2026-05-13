@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from scout.gui.widgets.data_table import DataTable
 from scout.gui.widgets.progress_panel import ProgressPanel
+from scout.gui.helpers import make_header
 from scout.gui.workers.pod_workers import PodPinterestExplorerWorker
 from scout.gui.search_history import SearchHistory
 
@@ -41,41 +42,43 @@ class PodPinterestExplorerPage(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        header = QLabel("<h2>📌 Pinterest Explorer</h2>")
-        layout.addWidget(header)
-
-        desc = QLabel(
-            "Browse niches by category or enter a seed to explore Pinterest. "
-            "Results show trend scores + Pinterest data (suggestions, boards, trending)."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 12px;")
-        layout.addWidget(desc)
+        make_header(self, layout, "<h2>📌 Pinterest Explorer</h2>",
+                     "Browse niches by category or enter a seed to explore Pinterest. "
+                     "Results show trend scores + Pinterest data (suggestions, boards, trending).")
 
         # Parameters
         param_group = QGroupBox("Parameters")
-        param_layout = QFormLayout(param_group)
+        param_layout = QVBoxLayout(param_group)
+        param_layout.setSpacing(8)
 
+        top_row = QHBoxLayout()
+        top_row.setSpacing(12)
+
+        top_row.addWidget(QLabel("Category:"))
         self._category_combo = QComboBox()
         self._category_combo.addItems([
             "All", "Professions", "Animals", "Family",
             "Hobbies", "Humor", "Holidays", "Sports",
             "Geographic", "Lifestyle",
         ])
-        param_layout.addRow("Category:", self._category_combo)
+        top_row.addWidget(self._category_combo)
 
-        self._seed_input = QLineEdit()
-        self._seed_input.setPlaceholderText("Or enter a seed directly (overrides category)")
-        param_layout.addRow("Seed (optional):", self._seed_input)
-
+        top_row.addWidget(QLabel("Limit:"))
         self._limit_spin = QSpinBox()
         self._limit_spin.setRange(5, 50)
         self._limit_spin.setValue(10)
-        param_layout.addRow("Limit:", self._limit_spin)
+        top_row.addWidget(self._limit_spin)
 
+        top_row.addWidget(QLabel("Show:"))
         self._mode_combo = QComboBox()
         self._mode_combo.addItems(["All", "Seeds", "Suggestions", "Boards", "Trending"])
-        param_layout.addRow("Show:", self._mode_combo)
+        top_row.addWidget(self._mode_combo)
+
+        top_row.addWidget(QLabel("Seed:"))
+        self._seed_input = QLineEdit()
+        self._seed_input.setPlaceholderText("Overrides category")
+        top_row.addWidget(self._seed_input, 1)
+        param_layout.addLayout(top_row)
 
         layout.addWidget(param_group)
 

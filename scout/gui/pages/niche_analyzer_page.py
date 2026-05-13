@@ -10,6 +10,7 @@ Displays a visual dashboard with gauge cards, trend chart, and keyword table.
 import logging
 from datetime import datetime
 
+from scout.gui.helpers import make_header
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QComboBox, QFrame, QSplitter, QTextEdit, QSizePolicy, QGridLayout,
@@ -270,15 +271,10 @@ class NicheAnalyzerPage(QWidget):
         layout.setSpacing(8)
 
         # ── Header ────────────────────────────────────────────────────
-        header = QLabel("🔬 Niche Analyzer")
-        header.setStyleSheet("font-size: 20px; font-weight: bold; color: #cdd6f4;")
-        layout.addWidget(header)
-
-        desc = QLabel("Enter a niche keyword → full automated analysis: keyword mining, "
-                       "competition probing, trend analysis, and aggregated scoring.")
-        desc.setStyleSheet("color: #a6adc8; font-size: 11px;")
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
+        make_header(self, layout, "🔬 Niche Analyzer",
+                     "Enter a niche keyword → full automated analysis: keyword mining, "
+                     "competition probing, trend analysis, and aggregated scoring.",
+                     title_style="font-size: 20px; font-weight: bold; color: #cdd6f4;")
 
         # ── Input bar ─────────────────────────────────────────────────
         input_row = QHBoxLayout()
