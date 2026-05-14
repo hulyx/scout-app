@@ -23,11 +23,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r scout/requirements.txt
           pip install pyinstaller matplotlib
 
       - name: Build .exe
-        run: pyinstaller scout_gui.spec
+        run: pyinstaller scout/scout_gui.spec
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

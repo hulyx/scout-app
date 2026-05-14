@@ -17,7 +17,7 @@ echo  [OK] Python detected
 echo.
 echo  Launching Scout...
 echo.
-python scout_gui.py
+python scout\scout_gui.py
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo  [ERROR] Failed to launch. Check errors above.

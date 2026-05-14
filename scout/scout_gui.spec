@@ -17,9 +17,9 @@ block_cipher = None
 
 # Use SPECPATH (PyInstaller built-in) to resolve paths relative to spec file
 # This ensures the icon is always found regardless of where the build is run from
-qss_path = os.path.join(SPECPATH, 'scout', 'gui', 'resources', 'style.qss')
-ico_path = os.path.join(SPECPATH, 'scout', 'gui', 'resources', 'kdpsy.ico')
-svg_path = os.path.join(SPECPATH, 'scout', 'gui', 'resources', 'kdpsy.svg')
+qss_path = os.path.join(SPECPATH, 'gui', 'resources', 'style.qss')
+ico_path = os.path.join(SPECPATH, 'gui', 'resources', 'kdpsy.ico')
+svg_path = os.path.join(SPECPATH, 'gui', 'resources', 'kdpsy.svg')
 
 a = Analysis(
     ['scout_gui.py'],

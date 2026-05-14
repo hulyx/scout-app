@@ -77,7 +77,7 @@ if !ERRORLEVEL! NEQ 0 (
 
 echo.
 echo  Installing requirements.txt...
-python -m pip install -r requirements.txt
+python -m pip install -r scout\requirements.txt
 if !ERRORLEVEL! NEQ 0 (
     echo  [ERROR] Failed to install requirements.
     echo  Check your internet connection and try again.
@@ -116,9 +116,9 @@ echo  Grab a coffee, compiling...
 echo.
 
 if exist "scout_gui.spec" (
-    python -m PyInstaller scout_gui.spec --noconfirm 2>build_log.txt
+    python -m PyInstaller scout\scout_gui.spec --noconfirm 2>build_log.txt
 ) else (
-    python -m PyInstaller --onefile --windowed --name="Scout" scout_gui.py --noconfirm 2>build_log.txt
+    python -m PyInstaller --onefile --windowed --name="Scout" scout\scout_gui.py --noconfirm 2>build_log.txt
 )
 
 if !ERRORLEVEL! NEQ 0 (
