@@ -518,7 +518,7 @@ class MainWindow(QMainWindow):
                 f"Successfully updated to v{new_version}!\nThe app will now restart.",
             )
 
-            script = str(app_dir / "scout_gui.py")
+            script = str(app_dir / "scout" / "scout_gui.py")
             subprocess.Popen([sys.executable, script], cwd=str(app_dir))
             QApplication.instance().quit()
 
